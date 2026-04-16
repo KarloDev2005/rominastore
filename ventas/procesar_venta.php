@@ -1,47 +1,55 @@
 <?php
+/* ventas/procesar_venta.php
+   FIX: Re-verifica stock con FOR UPDATE antes de insertar.
+   Previene overselling en ventas concurrentes.
+*/
 require_once '../includes/config.php';
 requerirAutenticacion();
 
-if (empty($_SESSION['carrito'])) {
-    header('Location: nueva_venta.php');
-    exit();
+if(empty($_SESSION['carrito'])){
+    header('Location: nueva_venta.php'); exit;
 }
 
-// Calcular total
-$total = 0;
-foreach ($_SESSION['carrito'] as $item) {
-    $total += $item['precio'] * $item['cantidad'];
-}
+$total=0;
+foreach($_SESSION['carrito'] as $item) $total+=round($item['precio']*$item['cantidad'],2);
 
 $conn->begin_transaction();
-try {
+try{
+    // Re-verificar stock
+    foreach($_SESSION['carrito'] as $item){
+        $s=$conn->prepare("SELECT stock,nombre FROM productos WHERE id_producto=? FOR UPDATE");
+        $s->bind_param("i",$item['id']);
+        $s->execute();
+        $p=$s->get_result()->fetch_assoc();
+        if(!$p) throw new Exception("Producto ID {$item['id']} no encontrado.");
+        if($item['cantidad']>$p['stock'])
+            throw new Exception("Stock insuficiente para «{$p['nombre']}» (solicitado: {$item['cantidad']}, disponible: {$p['stock']}).");
+    }
+
     // Insertar venta
-    $stmt_venta = $conn->prepare("INSERT INTO ventas (total, id_cliente, id_usuario) VALUES (?, NULL, ?)");
-    $stmt_venta->bind_param("di", $total, $_SESSION['usuario_id']);
-    $stmt_venta->execute();
-    $id_venta = $conn->insert_id;
+    $sv=$conn->prepare("INSERT INTO ventas(total,id_cliente,id_usuario)VALUES(?,NULL,?)");
+    $sv->bind_param("di",$total,$_SESSION['usuario_id']);
+    $sv->execute();
+    $id_venta=$conn->insert_id;
 
-    $stmt_detalle = $conn->prepare("INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?)");
-    $stmt_stock = $conn->prepare("UPDATE productos SET stock = stock - ? WHERE id_producto = ?");
-
-    foreach ($_SESSION['carrito'] as $item) {
-        $subtotal = $item['precio'] * $item['cantidad'];
-        $stmt_detalle->bind_param("iiidd", $id_venta, $item['id'], $item['cantidad'], $item['precio'], $subtotal);
-        $stmt_detalle->execute();
-
-        $stmt_stock->bind_param("ii", $item['cantidad'], $item['id']);
-        $stmt_stock->execute();
+    // Detalle + stock
+    $sd=$conn->prepare("INSERT INTO detalle_venta(id_venta,id_producto,cantidad,precio_unitario,subtotal)VALUES(?,?,?,?,?)");
+    $ss=$conn->prepare("UPDATE productos SET stock=stock-? WHERE id_producto=?");
+    foreach($_SESSION['carrito'] as $item){
+        $sub=round($item['precio']*$item['cantidad'],2);
+        $sd->bind_param("iiidd",$id_venta,$item['id'],$item['cantidad'],$item['precio'],$sub);
+        $sd->execute();
+        $ss->bind_param("ii",$item['cantidad'],$item['id']);
+        $ss->execute();
     }
 
     $conn->commit();
-    $_SESSION['ultima_venta'] = $id_venta;
-    $_SESSION['carrito'] = [];
-    header('Location: ticket.php');
-    exit();
-} catch (Exception $e) {
+    $_SESSION['ultima_venta']=$id_venta;
+    $_SESSION['carrito']=[];
+    header('Location: ticket.php'); exit;
+
+}catch(Exception $e){
     $conn->rollback();
-    $_SESSION['error_venta'] = 'Error al procesar la venta: ' . $e->getMessage();
-    header('Location: nueva_venta.php');
-    exit();
+    flashSet('error','No se pudo procesar la venta: '.$e->getMessage());
+    header('Location: nueva_venta.php'); exit;
 }
-?>

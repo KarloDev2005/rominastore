@@ -2,109 +2,88 @@
 require_once '../includes/config.php';
 requerirAutenticacion();
 
-// Consultar todos los productos
-$sql = "SELECT * FROM productos ORDER BY nombre ASC";
+// Búsqueda/filtro
+$buscar = limpiar($_GET['buscar'] ?? '');
+$sql = "SELECT * FROM productos";
+if ($buscar) {
+    $like = '%' . $conn->real_escape_string($buscar) . '%';
+    $sql .= " WHERE nombre LIKE '$like'";
+}
+$sql .= " ORDER BY nombre ASC";
 $resultado = $conn->query($sql);
+
+// Flash
+$flash = flashGet();
+
+layoutStart('Productos', 'productos', [['label' => 'Productos']]);
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RominaStore - Productos</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1000px;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-        }
-        h2 {
-            text-align: center;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #5cb85c;
-            color: white;
-        }
-        .btn {
-            display: inline-block;
-            padding: 5px 10px;
-            margin: 2px;
-            text-decoration: none;
-            border-radius: 4px;
-            color: white;
-        }
-        .btn-agregar {
-            background-color: #5cb85c;
-            padding: 10px;
-            margin-bottom: 15px;
-            display: inline-block;
-        }
-        .btn-editar {
-            background-color: #f0ad4e;
-        }
-        .btn-eliminar {
-            background-color: #d9534f;
-        }
-        .btn-volver {
-            background-color: #337ab7;
-            margin-top: 20px;
-            display: inline-block;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Gestión de Productos</h2>
-        <a href="agregar.php" class="btn btn-agregar">+ Agregar Producto</a>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Precio</th>
-                    <th>Stock</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php while($producto = $resultado->fetch_assoc()): ?>
-                <tr>
-                    <td><?php echo $producto['id_producto']; ?></td>
-                    <td><?php echo htmlspecialchars($producto['nombre']); ?></td>
-                    <td>$<?php echo number_format($producto['precio'], 2); ?></td>
-                    <td><?php echo $producto['stock']; ?></td>
-                    <td>
-                        <a href="editar.php?id=<?php echo $producto['id_producto']; ?>" class="btn btn-editar">Editar</a>
-                        <a href="eliminar.php?id=<?php echo $producto['id_producto']; ?>" class="btn btn-eliminar" onclick="return confirm('¿Eliminar este producto?')">Eliminar</a>
-                    </td>
-                </tr>
-                <?php endwhile; ?>
-                <?php if($resultado->num_rows == 0): ?>
-                <tr>
-                    <td colspan="5">No hay productos registrados.</td>
-                </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
-        <a href="../dashboard.php" class="btn btn-volver">Volver al Dashboard</a>
+
+<style>
+.filtros{display:flex;gap:.75rem;margin-bottom:1.1rem;flex-wrap:wrap;align-items:flex-end}
+.filtros .form-group{margin:0;flex:1;min-width:180px}
+.acciones-tabla{display:flex;gap:.4rem;flex-wrap:wrap}
+</style>
+
+<div class="page-head">
+  <div class="page-title">📦 Productos</div>
+  <div class="page-subtitle">Gestión de catálogo y precios</div>
+</div>
+
+<?php if($flash): ?>
+  <div class="alerta alerta-<?=$flash['tipo']?>"><?=e($flash['msg'])?></div>
+<?php endif ?>
+
+<div class="filtros">
+  <form method="GET" style="display:contents">
+    <div class="form-group">
+      <label class="form-label">Buscar producto</label>
+      <input type="text" name="buscar" class="form-control"
+             placeholder="Nombre del producto…" value="<?=e($buscar)?>">
     </div>
-</body>
-</html>
+    <button type="submit" class="btn btn-verde">🔍 Buscar</button>
+    <?php if($buscar): ?>
+      <a href="listar.php" class="btn btn-gris">✕ Limpiar</a>
+    <?php endif ?>
+  </form>
+  <a href="agregar.php" class="btn btn-verde" style="margin-left:auto">+ Agregar Producto</a>
+</div>
+
+<div class="card">
+  <div class="tabla-wrap">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>ID</th><th>Nombre</th><th>Precio</th><th>Stock</th><th>Estado</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php if($resultado->num_rows===0): ?>
+          <tr><td colspan="6"><div class="empty-state"><div class="ei">📭</div><p>No se encontraron productos.</p></div></td></tr>
+        <?php else: ?>
+          <?php while($p=$resultado->fetch_assoc()):
+            $stockClass = $p['stock']==0 ? 'badge-rojo' : ($p['stock']<=5 ? 'badge-naranja' : 'badge-verde');
+            $stockTxt   = $p['stock']==0 ? 'Agotado' : ($p['stock']<=5 ? 'Stock bajo' : 'OK');
+          ?>
+          <tr>
+            <td class="num" style="color:var(--gris-400);font-size:.75rem"><?=$p['id_producto']?></td>
+            <td><strong><?=e($p['nombre'])?></strong></td>
+            <td class="num dinero-verde"><?=dinero($p['precio'])?></td>
+            <td class="num"><?=$p['stock']?></td>
+            <td><span class="badge <?=$stockClass?>"><?=$stockTxt?></span></td>
+            <td>
+              <div class="acciones-tabla">
+                <a href="editar.php?id=<?=$p['id_producto']?>" class="btn btn-sm btn-naranja">✏ Editar</a>
+                <a href="eliminar.php?id=<?=$p['id_producto']?>"
+                   class="btn btn-sm btn-rojo"
+                   onclick="return confirm('¿Eliminar «<?=e($p['nombre'])?>»?')">🗑</a>
+              </div>
+            </td>
+          </tr>
+          <?php endwhile ?>
+        <?php endif ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<?php layoutEnd(); ?>

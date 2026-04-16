@@ -2,73 +2,91 @@
 require_once '../includes/config.php';
 requerirAutenticacion();
 
-$select_mode = isset($_GET['select']) && $_GET['select'] == 1;
+$select_mode = isset($_GET['select']) && $_GET['select']==1;
+$buscar = limpiar($_GET['buscar'] ?? '');
 
-$sql = "SELECT * FROM clientes ORDER BY nombre ASC";
+$sql = "SELECT * FROM clientes";
+$wheres = [];
+if ($buscar) $wheres[] = "nombre LIKE '%" . $conn->real_escape_string($buscar) . "%'";
+if ($wheres) $sql .= " WHERE " . implode(' AND ', $wheres);
+$sql .= " ORDER BY nombre ASC";
 $resultado = $conn->query($sql);
+
+$flash = flashGet();
+layoutStart('Clientes', 'clientes', [['label' => 'Clientes']]);
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>RominaStore - Clientes</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
-        h2 { text-align: center; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #5cb85c; color: white; }
-        .btn { display: inline-block; padding: 5px 10px; margin: 2px; text-decoration: none; border-radius: 4px; color: white; }
-        .btn-agregar { background-color: #5cb85c; padding: 10px; margin-bottom: 15px; display: inline-block; }
-        .btn-editar { background-color: #f0ad4e; }
-        .btn-eliminar { background-color: #d9534f; }
-        .btn-seleccionar { background-color: #337ab7; }
-        .btn-volver { background-color: #337ab7; margin-top: 20px; display: inline-block; }
-        .adeudo { font-weight: bold; color: #d9534f; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Gestión de Clientes</h2>
-        <a href="agregar.php" class="btn btn-agregar">+ Agregar Cliente</a>
-        <?php if ($select_mode): ?>
-            <div style="margin-bottom: 15px;">
-                <strong>Modo selección:</strong> Haz clic en "Seleccionar" para elegir un cliente para la venta a crédito.
-                <a href="../fiado/venta_credito.php" class="btn btn-editar" style="margin-left: 10px;">Cancelar</a>
-            </div>
-        <?php endif; ?>
-        <table>
-            <thead>
-                <tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th>Adeudo</th>
-                <?php if ($select_mode): ?><th>Seleccionar</th><?php endif; ?>
-                <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php while($cliente = $resultado->fetch_assoc()): ?>
-                <tr>
-                    <td><?php echo $cliente['id_cliente']; ?></td>
-                    <td><?php echo htmlspecialchars($cliente['nombre']); ?></td>
-                    <td><?php echo htmlspecialchars($cliente['telefono']); ?></td>
-                    <td class="adeudo">$<?php echo number_format($cliente['adeudo'], 2); ?></td>
-                    <?php if ($select_mode): ?>
-                    <td>
-                        <a href="../fiado/venta_credito.php?cliente=<?php echo $cliente['id_cliente']; ?>" class="btn btn-seleccionar">Seleccionar</a>
-                    </td>
-                    <?php endif; ?>
-                    <td>
-                        <a href="editar.php?id=<?php echo $cliente['id_cliente']; ?>" class="btn btn-editar">Editar</a>
-                        <a href="eliminar.php?id=<?php echo $cliente['id_cliente']; ?>" class="btn btn-eliminar" onclick="return confirm('¿Eliminar este cliente? Se perderá su historial de compras.')">Eliminar</a>
-                    </td>
-                </tr>
-                <?php endwhile; ?>
-                <?php if($resultado->num_rows == 0): ?>
-                <tr><td colspan="<?php echo $select_mode ? 6 : 5; ?>">No hay clientes registrados.</td></tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
-        <a href="../dashboard.php" class="btn btn-volver">Volver al Dashboard</a>
+
+<div class="page-head">
+  <div class="page-title">👥 Clientes</div>
+  <div class="page-subtitle"><?=$select_mode?'Selecciona un cliente para la venta a crédito':'Administración de clientes con crédito'?></div>
+</div>
+
+<?php if($select_mode): ?>
+  <div class="alerta alerta-info">
+    ℹ Modo selección — haz clic en "Seleccionar" para asignar el cliente a la venta.
+    <a href="../fiado/venta_credito.php" style="margin-left:auto;color:var(--azul);font-weight:800;text-decoration:none">✕ Cancelar</a>
+  </div>
+<?php endif ?>
+<?php if($flash): ?><div class="alerta alerta-<?=$flash['tipo']?>"><?=e($flash['msg'])?></div><?php endif ?>
+
+<div style="display:flex;gap:.75rem;margin-bottom:1.1rem;flex-wrap:wrap;align-items:flex-end">
+  <form method="GET" style="display:contents">
+    <?php if($select_mode): ?><input type="hidden" name="select" value="1"><?php endif ?>
+    <div class="form-group" style="margin:0;flex:1;min-width:180px">
+      <label class="form-label">Buscar cliente</label>
+      <input type="text" name="buscar" class="form-control" placeholder="Nombre…" value="<?=e($buscar)?>">
     </div>
-</body>
-</html>
+    <button type="submit" class="btn btn-verde">🔍</button>
+    <?php if($buscar): ?><a href="listar.php<?=$select_mode?'?select=1':''?>" class="btn btn-gris">✕</a><?php endif ?>
+  </form>
+  <?php if(!$select_mode): ?>
+    <a href="agregar.php" class="btn btn-verde" style="margin-left:auto">+ Agregar Cliente</a>
+  <?php endif ?>
+</div>
+
+<div class="card">
+  <div class="tabla-wrap">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>Nombre</th><th>Teléfono</th><th>Adeudo</th>
+          <?php if($select_mode): ?><th></th><?php else: ?><th>Acciones</th><?php endif ?>
+        </tr>
+      </thead>
+      <tbody>
+        <?php if($resultado->num_rows===0): ?>
+          <tr><td colspan="4"><div class="empty-state"><div class="ei">👥</div><p>No hay clientes registrados.</p></div></td></tr>
+        <?php else: ?>
+          <?php while($c=$resultado->fetch_assoc()): ?>
+          <tr>
+            <td><strong><?=e($c['nombre'])?></strong></td>
+            <td><?=e($c['telefono']?:'—')?></td>
+            <td>
+              <?php if($c['adeudo']>0): ?>
+                <span class="badge badge-rojo dinero"><?=dinero($c['adeudo'])?></span>
+              <?php else: ?>
+                <span class="badge badge-verde">Sin deuda</span>
+              <?php endif ?>
+            </td>
+            <td>
+              <?php if($select_mode): ?>
+                <a href="../fiado/venta_credito.php?cliente=<?=$c['id_cliente']?>" class="btn btn-sm btn-verde">Seleccionar</a>
+              <?php else: ?>
+                <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+                  <a href="../fiado/consultar_adeudo.php?cliente=<?=$c['id_cliente']?>" class="btn btn-sm btn-azul">💳 Adeudo</a>
+                  <a href="editar.php?id=<?=$c['id_cliente']?>" class="btn btn-sm btn-naranja">✏</a>
+                  <a href="eliminar.php?id=<?=$c['id_cliente']?>"
+                     class="btn btn-sm btn-rojo"
+                     onclick="return confirm('¿Eliminar a <?=e($c['nombre'])?>?')">🗑</a>
+                </div>
+              <?php endif ?>
+            </td>
+          </tr>
+          <?php endwhile ?>
+        <?php endif ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<?php layoutEnd(); ?>
