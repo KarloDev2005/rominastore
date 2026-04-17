@@ -1,58 +1,81 @@
 <?php
+/* fiado/procesar_credito.php — Procesa venta a crédito + notificación WhatsApp */
 require_once '../includes/config.php';
+require_once '../includes/whatsapp.php';
 requerirAutenticacion();
 
 if (empty($_SESSION['carrito_credito']) || empty($_SESSION['cliente_credito'])) {
-    header('Location: venta_credito.php');
-    exit();
+    header('Location: venta_credito.php'); exit;
 }
 
-$cliente_id = $_SESSION['cliente_credito'];
+$cliente_id = (int)$_SESSION['cliente_credito'];
 $total = 0;
-foreach ($_SESSION['carrito_credito'] as $item) {
-    $total += $item['precio'] * $item['cantidad'];
-}
+foreach ($_SESSION['carrito_credito'] as $item)
+    $total += round($item['precio'] * $item['cantidad'], 2);
 
 $conn->begin_transaction();
 try {
-    // Insertar venta con cliente
-    $stmt_venta = $conn->prepare("INSERT INTO ventas (total, id_cliente, id_usuario) VALUES (?, ?, ?)");
-    $stmt_venta->bind_param("dii", $total, $cliente_id, $_SESSION['usuario_id']);
-    $stmt_venta->execute();
-    $id_venta = $conn->insert_id;
-
-    // Insertar detalles y actualizar stock
-    $stmt_detalle = $conn->prepare("INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?)");
-    $stmt_stock = $conn->prepare("UPDATE productos SET stock = stock - ? WHERE id_producto = ?");
-
+    /* Re-verificar stock */
     foreach ($_SESSION['carrito_credito'] as $item) {
-        $subtotal = $item['precio'] * $item['cantidad'];
-        $stmt_detalle->bind_param("iiidd", $id_venta, $item['id'], $item['cantidad'], $item['precio'], $subtotal);
-        $stmt_detalle->execute();
-
-        $stmt_stock->bind_param("ii", $item['cantidad'], $item['id']);
-        $stmt_stock->execute();
+        $s = $conn->prepare("SELECT stock,nombre FROM productos WHERE id_producto=? FOR UPDATE");
+        $s->bind_param("i",$item['id']); $s->execute();
+        $p = $s->get_result()->fetch_assoc();
+        if (!$p) throw new Exception("Producto {$item['id']} no encontrado.");
+        if ($item['cantidad'] > $p['stock'])
+            throw new Exception("Stock insuficiente para «{$p['nombre']}» (disponible: {$p['stock']}).");
     }
 
-    // Actualizar adeudo del cliente
-    $stmt_adeudo = $conn->prepare("UPDATE clientes SET adeudo = adeudo + ? WHERE id_cliente = ?");
-    $stmt_adeudo->bind_param("di", $total, $cliente_id);
-    $stmt_adeudo->execute();
+    /* Insertar venta */
+    $sv = $conn->prepare("INSERT INTO ventas(total,id_cliente,id_usuario)VALUES(?,?,?)");
+    $sv->bind_param("dii",$total,$cliente_id,$_SESSION['usuario_id']);
+    $sv->execute();
+    $id_venta = $conn->insert_id;
+
+    /* Detalle + stock */
+    $sd = $conn->prepare("INSERT INTO detalle_venta(id_venta,id_producto,cantidad,precio_unitario,subtotal)VALUES(?,?,?,?,?)");
+    $ss = $conn->prepare("UPDATE productos SET stock=stock-? WHERE id_producto=?");
+    foreach ($_SESSION['carrito_credito'] as $item) {
+        $sub = round($item['precio']*$item['cantidad'],2);
+        $sd->bind_param("iiidd",$id_venta,$item['id'],$item['cantidad'],$item['precio'],$sub);
+        $sd->execute();
+        $ss->bind_param("ii",$item['cantidad'],$item['id']);
+        $ss->execute();
+    }
+
+    /* Actualizar adeudo */
+    $sa = $conn->prepare("UPDATE clientes SET adeudo=adeudo+? WHERE id_cliente=?");
+    $sa->bind_param("di",$total,$cliente_id);
+    $sa->execute();
+
+    /* Obtener adeudo actualizado y nombre del cliente */
+    $sc = $conn->prepare("SELECT nombre,adeudo FROM clientes WHERE id_cliente=?");
+    $sc->bind_param("i",$cliente_id); $sc->execute();
+    $cliente = $sc->get_result()->fetch_assoc();
 
     $conn->commit();
 
-    // Limpiar carrito y cliente seleccionado
-    $_SESSION['carrito_credito'] = [];
-    $_SESSION['cliente_credito'] = 0;
+    /* ── Notificación WhatsApp ── */
+    $items_wsp = [];
+    foreach ($_SESSION['carrito_credito'] as $item) {
+        $items_wsp[] = [
+            'nombre'   => $item['nombre'],
+            'cantidad' => $item['cantidad'],
+            'precio'   => $item['precio'],
+            'subtotal' => round($item['precio']*$item['cantidad'],2),
+        ];
+    }
+    wspNotificarFiado($cliente['nombre'], $items_wsp, $total, $cliente['adeudo']);
 
-    $_SESSION['mensaje_credito'] = "Venta a crédito registrada. Total: $" . number_format($total,2);
+    /* Limpiar sesión */
+    $_SESSION['carrito_credito'] = [];
+    unset($_SESSION['cliente_credito']);
+
+    flashSet('exito', "Venta a crédito de " . dinero($total) . " registrada. Se envió notificación WhatsApp.");
     header('Location: consultar_adeudo.php?cliente=' . $cliente_id);
-    exit();
+    exit;
 
 } catch (Exception $e) {
     $conn->rollback();
-    $_SESSION['error_credito'] = 'Error al procesar la venta a crédito: ' . $e->getMessage();
-    header('Location: venta_credito.php');
-    exit();
+    flashSet('error', 'Error al procesar: ' . $e->getMessage());
+    header('Location: venta_credito.php'); exit;
 }
-?>

@@ -1,24 +1,19 @@
 <?php
-/* ═══════════════════════════════════════════
-   ROMINASTORE — Funciones v2
-   
+/* ═══════════════════════════════════════════════════════
+   ABARROTES ROMINA — Funciones Centrales v3
+   ─────────────────────────────────────────────────────
    CORRECCIONES:
-   - limpiar() SIN real_escape_string (prepared statements ya protegen)
-   - Helpers e(), dinero(), csrfInput/Verificar(), flash*()
-   - layoutStart() / layoutEnd() para el shell con sidebar
-   ═══════════════════════════════════════════ */
+   · limpiar() sin real_escape_string (evita doble escape)
+   · CSRF helpers
+   · layoutStart() con sidebar de marca y logotipo real
+   ═══════════════════════════════════════════════════════ */
 
-/* ─── Redirección ─── */
-function redirigir($url) {
-    header("Location: " . BASE_URL . $url);
-    exit();
-}
+function redirigir($url) { header("Location: " . BASE_URL . $url); exit(); }
 
-/* ─── Autenticación ─── */
-function sesionIniciada()     { return !empty($_SESSION['usuario_id']); }
-function tieneRol($rol)       { return isset($_SESSION['rol']) && $_SESSION['rol'] === $rol; }
-function nombreUsuario()      { return $_SESSION['usuario_nombre'] ?? 'Invitado'; }
-function rolActual()          { return $_SESSION['rol'] ?? ''; }
+function sesionIniciada() { return !empty($_SESSION['usuario_id']); }
+function tieneRol($rol)   { return isset($_SESSION['rol']) && $_SESSION['rol'] === $rol; }
+function nombreUsuario()  { return $_SESSION['usuario_nombre'] ?? 'Invitado'; }
+function rolActual()      { return $_SESSION['rol'] ?? ''; }
 
 function requerirAutenticacion() {
     if (!sesionIniciada()) redirigir('index.php');
@@ -28,84 +23,69 @@ function requerirAdmin() {
     if (!tieneRol('admin')) redirigir('dashboard.php');
 }
 
-/* ─── Sanitización ────────────────────────────────────────────────────────
-   limpiar() NO usa real_escape_string.
-   Los prepared statements (bind_param) ya protegen contra SQL injection.
-   Usar ambos juntos rompía: "O'Brien" → "O\'Brien" en BD.
-   ─────────────────────────────────────────────────────────────────────── */
+/* Sanitización — SIN real_escape_string (los prepared statements lo hacen solos) */
 function limpiar($dato) { return trim(strip_tags((string)$dato)); }
+function e($str)        { return htmlspecialchars((string)$str, ENT_QUOTES|ENT_SUBSTITUTE, 'UTF-8'); }
+function dinero($m)     { return '$' . number_format((float)$m, 2); }
 
-/* Output seguro (htmlspecialchars) */
-function e($str) { return htmlspecialchars((string)$str, ENT_QUOTES|ENT_SUBSTITUTE, 'UTF-8'); }
-
-/* Formato monetario */
-function dinero($monto) { return '$' . number_format((float)$monto, 2); }
-
-/* ─── CSRF ────────────────────────────────────────────────────────────── */
+/* ── CSRF ── */
 function csrfToken() {
-    if (empty($_SESSION['csrf_token'])) {
+    if (empty($_SESSION['csrf_token']))
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    }
     return $_SESSION['csrf_token'];
 }
 function csrfInput() {
     return '<input type="hidden" name="csrf_token" value="' . csrfToken() . '">';
 }
 function csrfVerificar() {
-    $token = $_POST['csrf_token'] ?? '';
-    if (!hash_equals(csrfToken(), $token)) {
+    if (!hash_equals(csrfToken(), $_POST['csrf_token'] ?? '')) {
         http_response_code(403);
-        die('<p style="font-family:sans-serif;color:#dc2626;padding:2rem">Token CSRF inválido. <a href="javascript:history.back()">Volver</a></p>');
+        die('<p style="font-family:sans-serif;color:#dc2626;padding:2rem">Token inválido. <a href="javascript:history.back()">Volver</a></p>');
     }
 }
 
-/* ─── Flash messages ──────────────────────────────────────────────────── */
+/* ── Flash messages ── */
 function flashSet($tipo, $msg) { $_SESSION['flash'] = ['tipo' => $tipo, 'msg' => $msg]; }
 function flashGet() { $f = $_SESSION['flash'] ?? null; unset($_SESSION['flash']); return $f; }
 function flashHtml() {
-    $f = flashGet();
-    if (!$f) return '';
-    $clases = ['exito'=>'alerta-exito','error'=>'alerta-error','info'=>'alerta-info','aviso'=>'alerta-aviso'];
-    $iconos = ['exito'=>'✓','error'=>'✕','info'=>'ℹ','aviso'=>'⚠'];
-    $c = $clases[$f['tipo']] ?? 'alerta-info';
-    $i = $iconos[$f['tipo']] ?? 'ℹ';
-    return '<div class="alerta ' . $c . '">' . $i . ' ' . e($f['msg']) . '</div>';
+    $f = flashGet(); if (!$f) return '';
+    $m = ['exito'=>'alerta-exito','error'=>'alerta-error','info'=>'alerta-info','aviso'=>'alerta-aviso'];
+    $i = ['exito'=>'✓','error'=>'✕','info'=>'ℹ','aviso'=>'⚠'];
+    return '<div class="alerta '.($m[$f['tipo']]??'alerta-info').'">'
+         . ($i[$f['tipo']]??'ℹ').' '.e($f['msg']).'</div>';
 }
 
-/* ─── Layout con sidebar ──────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════
+   LAYOUT — Sidebar con logotipo de marca
+   ═══════════════════════════════════════════════════════ */
 function layoutStart($titulo = 'RominaStore', $activo = '', $breadcrumbs = []) {
-    $base = BASE_URL;
-    $user = e(nombreUsuario());
-    $rol  = rolActual();
+    $base  = BASE_URL;
+    $user  = e(nombreUsuario());
+    $rol   = rolActual();
+    $ini   = strtoupper(substr(strip_tags($user), 0, 1));
 
-    /* Inicial del usuario para avatar */
-    $inicial = strtoupper(substr($user, 0, 1));
-
-    /* Menú de navegación */
+    /* Menú */
     $nav = [
-        ['url' => 'ventas/nueva_venta.php',        'icon' => '🛒', 'label' => 'Punto de Venta',    'key' => 'pos'],
-        ['url' => 'fiado/venta_credito.php',        'icon' => '💳', 'label' => 'Ventas a Crédito',  'key' => 'credito'],
-        ['url' => 'fiado/consultar_adeudo.php',     'icon' => '📋', 'label' => 'Adeudos',            'key' => 'adeudos'],
-        ['url' => 'productos/listar.php',           'icon' => '📦', 'label' => 'Productos',          'key' => 'productos'],
-        ['url' => 'inventario/consultar.php',       'icon' => '🏬', 'label' => 'Inventario',         'key' => 'inventario'],
-        ['url' => 'clientes/listar.php',            'icon' => '👥', 'label' => 'Clientes',           'key' => 'clientes'],
-        ['url' => 'reportes/ventas.php',            'icon' => '📊', 'label' => 'Reportes',           'key' => 'reportes'],
+        ['url'=>'ventas/nueva_venta.php',    'icon'=>'🛒', 'label'=>'Punto de Venta',   'key'=>'pos'],
+        ['url'=>'fiado/venta_credito.php',   'icon'=>'💳', 'label'=>'Venta a Crédito',  'key'=>'credito'],
+        ['url'=>'fiado/consultar_adeudo.php','icon'=>'📋', 'label'=>'Adeudos',           'key'=>'adeudos'],
+        ['url'=>'productos/listar.php',      'icon'=>'📦', 'label'=>'Productos',         'key'=>'productos'],
+        ['url'=>'inventario/consultar.php',  'icon'=>'🏬', 'label'=>'Inventario',        'key'=>'inventario'],
+        ['url'=>'clientes/listar.php',       'icon'=>'👥', 'label'=>'Clientes',          'key'=>'clientes'],
+        ['url'=>'reportes/ventas.php',       'icon'=>'📊', 'label'=>'Reportes',          'key'=>'reportes'],
     ];
-    if ($rol === 'admin') {
-        $nav[] = ['url' => 'usuarios/listar.php', 'icon' => '⚙️', 'label' => 'Usuarios', 'key' => 'usuarios'];
-    }
+    if ($rol === 'admin')
+        $nav[] = ['url'=>'usuarios/listar.php','icon'=>'⚙️','label'=>'Usuarios','key'=>'usuarios'];
 
-    /* Breadcrumbs HTML */
-    $bcHtml = '';
+    /* Breadcrumb HTML */
+    $bc = '';
     if (!empty($breadcrumbs)) {
-        $bcHtml .= '<a href="' . $base . 'dashboard.php">Inicio</a>';
-        foreach ($breadcrumbs as $bc) {
-            $bcHtml .= '<span class="sep">›</span>';
-            if (!empty($bc['url'])) {
-                $bcHtml .= '<a href="' . $base . $bc['url'] . '">' . e($bc['label']) . '</a>';
-            } else {
-                $bcHtml .= '<span class="current">' . e($bc['label']) . '</span>';
-            }
+        $bc .= '<a href="'.$base.'dashboard.php">Inicio</a>';
+        foreach ($breadcrumbs as $b) {
+            $bc .= '<span class="sep">›</span>';
+            $bc .= !empty($b['url'])
+                ? '<a href="'.$base.$b['url'].'">'.e($b['label']).'</a>'
+                : '<span class="current">'.e($b['label']).'</span>';
         }
     }
 
@@ -113,65 +93,65 @@ function layoutStart($titulo = 'RominaStore', $activo = '', $breadcrumbs = []) {
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>' . e($titulo) . ' — RominaStore</title>
-  <link rel="stylesheet" href="' . $base . 'css/app.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>'.e($titulo).' — Abarrotes Romina</title>
+  <link rel="icon" type="image/png" href="'.$base.'img/icono.png">
+  <link rel="stylesheet" href="'.$base.'css/app.css">
 </head>
 <body>
 <div class="app-shell">
 
-  <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-icon">🛒</div>
-      <div class="logo-txt">
-        <div class="logo-name">RominaStore</div>
-        <div class="logo-sub">Abarrotes Romina</div>
-      </div>
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <img src="'.$base.'img/icono.png" alt="Logo Romina" class="logo-img">
+    <div class="logo-txt">
+      <div class="logo-name">Abarrotes Romina</div>
+      <div class="logo-sub">Sistema POS</div>
     </div>
+  </div>
 
-    <nav class="sidebar-nav">';
+  <nav class="sidebar-nav">';
 
     foreach ($nav as $item) {
-        $eActivo = $activo === $item['key'] ? ' activo' : '';
+        $cls = $activo === $item['key'] ? ' activo' : '';
         echo '
-      <a href="' . $base . $item['url'] . '" class="nav-item' . $eActivo . '">
-        <span class="nav-icon">' . $item['icon'] . '</span>
-        <span class="nav-label">' . $item['label'] . '</span>
-      </a>';
+    <a href="'.$base.$item['url'].'" class="nav-item'.$cls.'">
+      <span class="ni">'.$item['icon'].'</span>
+      <span class="nl">'.$item['label'].'</span>
+    </a>';
     }
 
     echo '
-    </nav>
+  </nav>
 
-    <div class="sidebar-footer">
-      <div class="sidebar-user">
-        <div class="user-avatar">' . $inicial . '</div>
-        <div class="user-info">
-          <div class="user-name">' . $user . '</div>
-          <div class="user-role">' . ucfirst($rol) . '</div>
-        </div>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar">'.$ini.'</div>
+      <div style="flex:1;min-width:0">
+        <div class="user-name">'.$user.'</div>
+        <div class="user-role">'.ucfirst($rol).'</div>
       </div>
-      <a href="' . $base . 'logout.php" class="btn-salir">⏻ Cerrar sesión</a>
     </div>
-  </aside>
+    <a href="'.$base.'logout.php" class="btn-salir">⏻ Cerrar sesión</a>
+  </div>
+</aside>
 
-  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
-  <!-- Contenido -->
-  <div class="main-content">
-    <header class="main-topbar">
-      <button class="topbar-hamburger" onclick="toggleSidebar()" aria-label="Menú">☰</button>
-      <nav class="topbar-breadcrumb">' . $bcHtml . '</nav>
-      <div class="topbar-actions"></div>
-    </header>
-    <main class="page-area">';
+<!-- ══ CONTENIDO ══ -->
+<div class="main-content">
+  <header class="main-topbar">
+    <button class="topbar-hamburger" onclick="toggleSidebar()" aria-label="Menú">☰</button>
+    <nav class="topbar-breadcrumb">'.$bc.'</nav>
+  </header>
+  <main class="page-area">';
 }
 
 function layoutEnd() {
     echo '
-    </main>
-  </div><!-- /main-content -->
+  </main>
+</div><!-- /main-content -->
 </div><!-- /app-shell -->
 
 <script>
@@ -190,7 +170,7 @@ setTimeout(()=>{
     el.style.opacity="0";
     setTimeout(()=>el.remove(),400);
   });
-}, 3800);
+},3800);
 </script>
 </body>
 </html>';

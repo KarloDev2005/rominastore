@@ -2,82 +2,70 @@
 require_once '../includes/config.php';
 requerirAdmin();
 
-$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-if ($id <= 0) {
-    header('Location: listar.php');
-    exit();
-}
+$id=isset($_GET['id'])?(int)$_GET['id']:0;
+if($id<=0){header('Location: listar.php');exit;}
+$s=$conn->prepare("SELECT id_usuario,nombre,rol FROM usuarios WHERE id_usuario=?");
+$s->bind_param("i",$id);$s->execute();
+$usuario=$s->get_result()->fetch_assoc();
+if(!$usuario){header('Location: listar.php');exit;}
 
-$stmt = $conn->prepare("SELECT id_usuario, nombre, rol FROM usuarios WHERE id_usuario = ?");
-$stmt->bind_param("i", $id);
-$stmt->execute();
-$usuario = $stmt->get_result()->fetch_assoc();
-if (!$usuario) {
-    header('Location: listar.php');
-    exit();
-}
-
-$error = '';
-$exito = '';
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $nombre = limpiar($_POST['nombre']);
-    $rol = $_POST['rol'];
-    $nueva_contrasena = $_POST['nueva_contrasena'];
-
-    if ($nombre == '') {
-        $error = 'El nombre es obligatorio.';
-    } else {
-        if (!empty($nueva_contrasena)) {
-            $hash = password_hash($nueva_contrasena, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("UPDATE usuarios SET nombre=?, contrasena=?, rol=? WHERE id_usuario=?");
-            $stmt->bind_param("sssi", $nombre, $hash, $rol, $id);
-        } else {
-            $stmt = $conn->prepare("UPDATE usuarios SET nombre=?, rol=? WHERE id_usuario=?");
-            $stmt->bind_param("ssi", $nombre, $rol, $id);
+$error=$exito='';
+if($_SERVER['REQUEST_METHOD']==='POST'){
+    $nombre=limpiar($_POST['nombre']??'');
+    $rol=$_POST['rol']==='admin'?'admin':'cajero';
+    $nueva_pw=$_POST['nueva_contrasena']??'';
+    if($nombre===''){$error='El nombre es obligatorio.';}
+    elseif($nueva_pw!==''&&strlen($nueva_pw)<6){$error='La contraseña nueva debe tener al menos 6 caracteres.';}
+    else{
+        if($nueva_pw!==''){
+            $hash=password_hash($nueva_pw,PASSWORD_DEFAULT);
+            $s=$conn->prepare("UPDATE usuarios SET nombre=?,contrasena=?,rol=? WHERE id_usuario=?");
+            $s->bind_param("sssi",$nombre,$hash,$rol,$id);
+        }else{
+            $s=$conn->prepare("UPDATE usuarios SET nombre=?,rol=? WHERE id_usuario=?");
+            $s->bind_param("ssi",$nombre,$rol,$id);
         }
-        if ($stmt->execute()) {
-            $exito = 'Usuario actualizado correctamente.';
-            $usuario['nombre'] = $nombre;
-            $usuario['rol'] = $rol;
-        } else {
-            $error = 'Error al actualizar: ' . $conn->error;
-        }
+        if($s->execute()){
+            flashSet('exito',"Usuario «{$nombre}» actualizado.");
+            header('Location: listar.php');exit;
+        }else{$error='Error al actualizar: '.$conn->error;}
     }
 }
+
+layoutStart('Editar Usuario','usuarios',[['label'=>'Usuarios','url'=>'usuarios/listar.php'],['label'=>'Editar']]);
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>RominaStore - Editar Usuario</title>
-    <style>
-        body { font-family: Arial; background: #f4f4f4; padding: 20px; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
-        input, select, button { width: 100%; padding: 8px; margin: 5px 0; }
-        button { background: #f0ad4e; color: white; border: none; cursor: pointer; }
-        .error { color: red; }
-        .exito { color: green; }
-        a { display: inline-block; margin-top: 10px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Editar Usuario</h2>
-        <?php if ($error): ?><div class="error"><?php echo $error; ?></div><?php endif; ?>
-        <?php if ($exito): ?><div class="exito"><?php echo $exito; ?></div><?php endif; ?>
-        <form method="POST">
-            <label>Nombre de usuario:</label>
-            <input type="text" name="nombre" required value="<?php echo htmlspecialchars($usuario['nombre']); ?>">
-            <label>Rol:</label>
-            <select name="rol">
-                <option value="cajero" <?php if($usuario['rol']=='cajero') echo 'selected'; ?>>Cajero</option>
-                <option value="admin" <?php if($usuario['rol']=='admin') echo 'selected'; ?>>Administrador</option>
-            </select>
-            <label>Nueva contraseña (dejar en blanco para mantener actual):</label>
-            <input type="password" name="nueva_contrasena">
-            <button type="submit">Actualizar Usuario</button>
-        </form>
-        <a href="listar.php">← Volver a lista de usuarios</a>
+
+<div class="page-head">
+  <div class="page-title">✏️ Editar Usuario</div>
+</div>
+
+<div style="max-width:480px">
+  <div class="card">
+    <div class="card-body">
+      <?php if($error): ?><div class="alerta alerta-error">✕ <?=e($error)?></div><?php endif ?>
+      <form method="POST">
+        <div class="form-group">
+          <label class="form-label">Nombre de usuario</label>
+          <input type="text" name="nombre" class="form-control" required value="<?=e($usuario['nombre'])?>">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Rol</label>
+          <select name="rol" class="form-control">
+            <option value="cajero" <?=$usuario['rol']==='cajero'?'selected':''?>>Cajero — solo ventas e inventario</option>
+            <option value="admin"  <?=$usuario['rol']==='admin' ?'selected':''?>>Administrador — acceso completo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nueva contraseña <small style="font-weight:400;color:var(--gris-400)">(dejar en blanco para no cambiar)</small></label>
+          <input type="password" name="nueva_contrasena" class="form-control" placeholder="••••••">
+        </div>
+        <div style="display:flex;gap:.65rem;flex-wrap:wrap">
+          <button type="submit" class="btn btn-naranja">✓ Actualizar</button>
+          <a href="listar.php" class="btn btn-gris">Cancelar</a>
+        </div>
+      </form>
     </div>
-</body>
-</html>
+  </div>
+</div>
+
+<?php layoutEnd(); ?>

@@ -2,81 +2,45 @@
 require_once '../includes/config.php';
 requerirAutenticacion();
 
-$id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-if ($id <= 0) {
-    header('Location: listar.php');
-    exit();
-}
+$id=isset($_GET['id'])?(int)$_GET['id']:0;
+if($id<=0){header('Location: listar.php');exit;}
+$s=$conn->prepare("SELECT * FROM clientes WHERE id_cliente=?");
+$s->bind_param("i",$id);$s->execute();
+$cliente=$s->get_result()->fetch_assoc();
+if(!$cliente){header('Location: listar.php');exit;}
 
-// Obtener datos actuales
-$sql = "SELECT * FROM clientes WHERE id_cliente = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $id);
-$stmt->execute();
-$resultado = $stmt->get_result();
-$cliente = $resultado->fetch_assoc();
-
-if (!$cliente) {
-    header('Location: listar.php');
-    exit();
-}
-
-$error = '';
-$exito = '';
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $nombre = limpiar($_POST['nombre']);
-    $telefono = limpiar($_POST['telefono']);
-
-    if ($nombre == '') {
-        $error = 'El nombre es obligatorio.';
-    } else {
-        $sql_update = "UPDATE clientes SET nombre=?, telefono=? WHERE id_cliente=?";
-        $stmt_update = $conn->prepare($sql_update);
-        $stmt_update->bind_param("ssi", $nombre, $telefono, $id);
-        if ($stmt_update->execute()) {
-            $exito = 'Cliente actualizado correctamente.';
-            $cliente['nombre'] = $nombre;
-            $cliente['telefono'] = $telefono;
-        } else {
-            $error = 'Error al actualizar: ' . $conn->error;
-        }
+$error='';
+if($_SERVER['REQUEST_METHOD']==='POST'){
+    $nombre=limpiar($_POST['nombre']??'');
+    $telefono=limpiar($_POST['telefono']??'');
+    if($nombre===''){$error='El nombre es obligatorio.';}
+    else{
+        $s2=$conn->prepare("UPDATE clientes SET nombre=?,telefono=? WHERE id_cliente=?");
+        $s2->bind_param("ssi",$nombre,$telefono,$id);
+        if($s2->execute()){flashSet('exito',"Cliente actualizado.");header('Location: listar.php');exit;}
+        else{$error='Error: '.$conn->error;}
     }
 }
+layoutStart('Editar Cliente','clientes',[['label'=>'Clientes','url'=>'clientes/listar.php'],['label'=>'Editar']]);
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>RominaStore - Editar Cliente</title>
-    <style>
-        body { font-family: Arial; background: #f4f4f4; padding: 20px; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
-        input, button { width: 100%; padding: 8px; margin: 5px 0; }
-        button { background: #f0ad4e; color: white; border: none; cursor: pointer; }
-        .error { color: red; }
-        .exito { color: green; }
-        .adeudo-info { background: #f9f9f9; padding: 10px; margin: 10px 0; border-left: 4px solid #5cb85c; }
-        a { display: inline-block; margin-top: 10px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Editar Cliente</h2>
-        <div class="adeudo-info">
-            <strong>Adeudo actual:</strong> $<?php echo number_format($cliente['adeudo'], 2); ?>
-            <br><small>(El adeudo se actualiza automáticamente con ventas a crédito y abonos)</small>
-        </div>
-        <?php if ($error): ?><div class="error"><?php echo $error; ?></div><?php endif; ?>
-        <?php if ($exito): ?><div class="exito"><?php echo $exito; ?></div><?php endif; ?>
-        <form method="POST">
-            <label>Nombre:</label>
-            <input type="text" name="nombre" required value="<?php echo htmlspecialchars($cliente['nombre']); ?>">
-            <label>Teléfono:</label>
-            <input type="text" name="telefono" value="<?php echo htmlspecialchars($cliente['telefono']); ?>">
-            <button type="submit">Actualizar Cliente</button>
-        </form>
-        <a href="listar.php">← Volver a lista de clientes</a>
+<div class="page-head"><div class="page-title">✏️ Editar Cliente</div></div>
+<div style="max-width:480px">
+  <div class="card"><div class="card-body">
+    <div style="background:var(--naranja-bg);border:1px solid var(--naranja-borde);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#92400e;font-weight:600">
+      💰 Adeudo actual: <strong><?=dinero($cliente['adeudo'])?></strong>
+      <span style="opacity:.7;font-weight:400;display:block;margin-top:2px">Se actualiza automáticamente con ventas y abonos.</span>
     </div>
-</body>
-</html>
+    <?php if($error): ?><div class="alerta alerta-error">✕ <?=e($error)?></div><?php endif ?>
+    <form method="POST">
+      <div class="form-group"><label class="form-label">Nombre completo</label>
+        <input type="text" name="nombre" class="form-control" required value="<?=e($cliente['nombre'])?>"></div>
+      <div class="form-group"><label class="form-label">Teléfono</label>
+        <input type="text" name="telefono" class="form-control" value="<?=e($cliente['telefono'])?>"></div>
+      <div style="display:flex;gap:.65rem">
+        <button type="submit" class="btn btn-naranja">✓ Actualizar</button>
+        <a href="listar.php" class="btn btn-gris">Cancelar</a>
+      </div>
+    </form>
+  </div></div>
+</div>
+<?php layoutEnd(); ?>
