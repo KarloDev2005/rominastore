@@ -180,3 +180,24 @@ Busca ;extension=gd y borra el punto y coma (;) para que quede extension=gd.
 Guarda el archivo.
 
 Reinicia Apache desde el Panel de Control de XAMPP (Stop → Start).
+
+
+
+
+
+Tabla de cierres de caja
+CREATE TABLE IF NOT EXISTS cierres_caja (
+  id                  INT AUTO_INCREMENT PRIMARY KEY,
+  fecha               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ventas_contado      DECIMAL(12,2) NOT NULL DEFAULT 0,
+  ventas_credito      DECIMAL(12,2) NOT NULL DEFAULT 0,
+  abonos              DECIMAL(12,2) NOT NULL DEFAULT 0,
+  efectivo_sistema    DECIMAL(12,2) NOT NULL DEFAULT 0,
+  efectivo_declarado  DECIMAL(12,2) NOT NULL DEFAULT 0,
+  diferencia          DECIMAL(12,2) NOT NULL DEFAULT 0,
+  estado              ENUM('ok','exceso','faltante') NOT NULL DEFAULT 'ok',
+  nota                VARCHAR(255) NULL,
+  id_usuario          INT NOT NULL,
+  FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ 

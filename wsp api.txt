@@ -15,3 +15,17 @@ token de acceso: EAAecS3E8AysBRDA3Ajoe2MoGGSd9MZBQLgm3sdxh2w9P093VnZA8ZAtWaROEn9
 
 
 Administrador / admin123
+
+Nombre : notificacion_fiado_interno
+
+
+━━━━━━━━━━━━━━━━━━
+👤 Cliente: {{1}}
+📅 Fecha: {{2}}
+━━━━━━━━━━━━━━━━━━
+Productos:
+{{3}}
+━━━━━━━━━━━━━━━━━━
+💵 Esta venta: {{4}}
+📋 Adeudo total:{{5}}
+━━━━━━━━━━━━━━━━━━
