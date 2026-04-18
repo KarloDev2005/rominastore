@@ -16,6 +16,8 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 define('BASE_URL', 'http://localhost:8080/rominastore/');
+define('BASE_PATH', 'C:/xampp/htdocs/rominastore/');
+// ↑ ajusta la ruta real de tu instalación
 
 // Incluir funciones
 require_once __DIR__ . '/funciones.php';

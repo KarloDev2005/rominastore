@@ -164,3 +164,19 @@ INSERT INTO clientes (nombre, telefono, adeudo) VALUES
 ===================================================
           ¡SISTEMA LISTO PARA USAR!
 ===================================================
+
+
+
+IMPORTANTE:
+Habilitar extensión GD (para imágenes de productos)
+Esto Permite subir y redimensionar fotos de productos. Si no está activa, aparecerá un error Call to undefined function imagecreatefromjpeg().
+
+Pasos en XAMPP:
+
+Ve a C:\xampp\php\ y abre php.ini con el Bloc de notas.
+
+Busca ;extension=gd y borra el punto y coma (;) para que quede extension=gd.
+
+Guarda el archivo.
+
+Reinicia Apache desde el Panel de Control de XAMPP (Stop → Start).
