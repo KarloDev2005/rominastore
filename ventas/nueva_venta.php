@@ -1,5 +1,5 @@
 <?php
-/* ventas/nueva_venta.php — POS con imágenes, toast "pop", lightbox */
+
 require_once '../includes/config.php';
 requerirAutenticacion();
 
@@ -7,7 +7,7 @@ if (!isset($_SESSION['carrito'])) $_SESSION['carrito'] = [];
 
 $error = ''; $exito = '';
 
-/* Ajustar cantidad por GET */
+
 if (isset($_GET['qty_id'], $_GET['qty_n'])) {
     $id = (int)$_GET['qty_id']; $n = (int)$_GET['qty_n'];
     if (isset($_SESSION['carrito'][$id])) {

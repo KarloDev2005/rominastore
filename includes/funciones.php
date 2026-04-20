@@ -1,11 +1,4 @@
 <?php
-/* =================================================================
-   ABARROTES ROMINA — Funciones v6
-   · Sidebar: "Inicio" en lugar de "Dashboard"
-   · Dark mode toggle (solo CSS+JS)
-   · Avatar con menú desplegable
-   · Estado del sidebar persistente (sin "reinicio" visual)
-   ================================================================= */
 
 function redirigir($url) { header("Location: " . BASE_URL . $url); exit(); }
 
@@ -17,12 +10,12 @@ function rolActual()      { return $_SESSION['rol'] ?? ''; }
 function requerirAutenticacion() { if (!sesionIniciada()) redirigir('index.php'); }
 function requerirAdmin()         { requerirAutenticacion(); if (!tieneRol('admin')) redirigir('dashboard.php'); }
 
-/* Sanitización — SIN real_escape_string */
+
 function limpiar($dato) { return trim(strip_tags((string)$dato)); }
 function e($str)        { return htmlspecialchars((string)$str, ENT_QUOTES|ENT_SUBSTITUTE, 'UTF-8'); }
 function dinero($m)     { return '$' . number_format((float)$m, 2); }
 
-/* ── CSRF ── */
+
 function csrfToken() {
     if (empty($_SESSION['csrf_token']))
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -36,7 +29,7 @@ function csrfVerificar() {
     }
 }
 
-/* ── Flash ── */
+
 function flashSet($tipo, $msg) { $_SESSION['flash'] = ['tipo'=>$tipo,'msg'=>$msg]; }
 function flashGet()            { $f=$_SESSION['flash']??null; unset($_SESSION['flash']); return $f; }
 function flashHtml() {
@@ -48,7 +41,7 @@ function flashHtml() {
     return '<div class="alerta '.$c.'"><i class="fa-solid '.$i.'"></i> '.e($f['msg']).'</div>';
 }
 
-/* ── Imagen de producto ── */
+
 function subirImagenProducto($file, $id_producto): array {
     $permitidos = ['image/jpeg','image/jpg','image/png','image/webp'];
     if ($file['error'] !== UPLOAD_ERR_OK)
@@ -97,10 +90,9 @@ function thumbProducto(?string $ruta, string $nombre='', int $size=48): string {
     return '<div class="prod-thumb-placeholder" style="width:'.$size.'px;height:'.$size.'px" title="Sin imagen"><i class="fa-solid fa-image"></i></div>';
 }
 
-/* ── Adeudos con días de atraso (para notificaciones) ── */
+
 function obtenerDeudoresAtraso($conn, int $dias_min=2, int $limite=5): array {
-    // Obtiene clientes con adeudo > 0
-    // Como no tenemos fecha_adeudo, tomamos la fecha de la última venta a crédito
+    
     $sql = "SELECT c.id_cliente, c.nombre, c.adeudo,
                    MAX(v.fecha) AS ultima_compra,
                    DATEDIFF(NOW(), MAX(v.fecha)) AS dias_atraso
@@ -120,17 +112,14 @@ function obtenerDeudoresAtraso($conn, int $dias_min=2, int $limite=5): array {
     return $out;
 }
 
-/* ════════════════════════════════════════════════════
-   LAYOUT START — Con dark mode, avatar dropdown,
-   breadcrumb correcto, sidebar sin "reinicio"
-   ════════════════════════════════════════════════════ */
+
 function layoutStart($titulo='RominaStore', $activo='', $breadcrumbs=[]) {
     $base = BASE_URL;
     $user = e(nombreUsuario());
     $rol  = rolActual();
     $ini  = strtoupper(substr(strip_tags($user), 0, 2)); // 2 letras para avatar
 
-    /* Menú con iconos FA — "Inicio" en lugar de "Dashboard" */
+  
     $nav = [
         ['url'=>'dashboard.php',              'icon'=>'fa-solid fa-house',              'label'=>'Inicio',            'key'=>'dashboard'],
         ['url'=>'ventas/nueva_venta.php',     'icon'=>'fa-solid fa-cash-register',      'label'=>'Punto de Venta',    'key'=>'pos'],
@@ -145,7 +134,7 @@ function layoutStart($titulo='RominaStore', $activo='', $breadcrumbs=[]) {
     if ($rol==='admin')
         $nav[]=['url'=>'usuarios/listar.php','icon'=>'fa-solid fa-gear','label'=>'Usuarios','key'=>'usuarios'];
 
-    /* Breadcrumb */
+
     $bc='';
     if (!empty($breadcrumbs)) {
         $bc .= '<a href="'.$base.'dashboard.php"><i class="fa-solid fa-house"></i> Inicio</a>';

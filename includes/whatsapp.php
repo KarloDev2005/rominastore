@@ -1,103 +1,134 @@
 <?php
-/* ═══════════════════════════════════════════════════
-   includes/whatsapp.php — WhatsApp Cloud API Helper
 
-   Credenciales (Meta Business / WhatsApp Cloud API)
-   ═══════════════════════════════════════════════════ */
-
-define('WSP_PHONE_ID',   '1129069736946295');
-define('WSP_WABA_ID',    '967609229076020');
-define('WSP_TOKEN',      'EAAecS3E8AysBRLzY4l9ICOWX3cbd10ktRPMgt2ja1z1oGviVFOYFgr8Szjnr0uQ9nIQTxUjR0jmjskIMn63wZB4xWM6eZAaTXk9nF2I5s4yCy5Rk8ZCqgkY9VRZADR29YoIwsZAhykr3o5Ka2aBVZBgbMfZC89HPiLwOJjZA2BE26A9RcKzzpSJ4nI1LWt98FMHZBjU0IdeeF2FEduOjcClfLzrLTJ9UcwZAffLMENIrqEA5IURvSRUXyniaJzTI3sh8fY1HxDsSf95VHkZB7YlcoDf');
-
-/* Número del dueño — recibe todas las notificaciones */
-define('WSP_OWNER',      '522871246175'); // +52 287 124 6175 en formato internacional sin +
-
-/* Número de prueba (usado en dev / sandbox de Meta) */
-define('WSP_TEST_NUM',   '15556389536');
+define('WSP_PHONE_ID',  '1129069736946295');
+define('WSP_TOKEN',     'EAAecS3E8AysBRSdSX8OZCZA8k734dn2sFikZAazSqDC0pt68gvhe8DgTj4W7U5sizpHcCr3NEoFJcmX273234jNDMqPuUvIgfq666Ykf9wK7yIwzrcqWpFXPzWPlnZBtsG9mSGBvY9Wf4ZA4lVMgEEIkFaqGqEO3wqUqfNLvqa1C6fJYyNojpHKp9soKXyz0xbqU5pjvQOZBFslao9SdmpELdnSziyqe5D94393WBlQmWAxfFB8cFngHET9KGXnPZAixLof4bLUw01WQIK8g7FNoQZDZD');
+define('WSP_API_VER',   'v25.0');
+define('WSP_DESTINO',   '522871246175');  /* +52 287 124 6175 */
+define('WSP_PLANTILLA', 'notificacion_fiado_interno');
+define('WSP_IDIOMA',    'es_MX');
 
 /**
- * Envía un mensaje de texto simple al número del dueño.
+ * Envía un mensaje usando plantilla aprobada de Meta.
  *
- * @param  string $mensaje  Texto a enviar (max ~4096 chars)
- * @return array            ['ok'=>bool, 'response'=>array|string]
+ * @param  array  $parametros  Lista de strings para {{1}}..{{N}}
+ * @return array               ['ok'=>bool, 'code'=>int, 'body'=>array]
  */
-function wspEnviar(string $mensaje): array {
-    $url  = 'https://graph.facebook.com/v19.0/' . WSP_PHONE_ID . '/messages';
-    $body = json_encode([
+function wspEnviarPlantilla(array $parametros): array {
+    $url = 'https://graph.facebook.com/' . WSP_API_VER . '/' . WSP_PHONE_ID . '/messages';
+
+    /* Construir componentes del body */
+    $components = [];
+    if (!empty($parametros)) {
+        $params_formateados = [];
+        foreach ($parametros as $valor) {
+            $params_formateados[] = [
+                'type' => 'text',
+                'text' => (string)$valor,
+            ];
+        }
+        $components[] = [
+            'type'       => 'body',
+            'parameters' => $params_formateados,
+        ];
+    }
+
+    $payload = [
         'messaging_product' => 'whatsapp',
-        'to'                => WSP_OWNER,
-        'type'              => 'text',
-        'text'              => ['body' => $mensaje],
-    ]);
+        'to'                => WSP_DESTINO,
+        'type'              => 'template',
+        'template'          => [
+            'name'       => WSP_PLANTILLA,
+            'language'   => ['code' => WSP_IDIOMA],
+            'components' => $components,
+        ],
+    ];
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $body,
+        CURLOPT_POSTFIELDS     => json_encode($payload),
         CURLOPT_HTTPHEADER     => [
             'Content-Type: application/json',
             'Authorization: Bearer ' . WSP_TOKEN,
         ],
-        CURLOPT_TIMEOUT        => 8,
+        CURLOPT_TIMEOUT        => 10,
+        CURLOPT_SSL_VERIFYPEER => true,
     ]);
 
-    $resp    = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $respuesta   = curl_exec($ch);
+    $codigo_http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_error  = curl_error($ch);
     curl_close($ch);
 
-    $decoded = json_decode($resp, true);
-    return ['ok' => ($httpCode >= 200 && $httpCode < 300), 'response' => $decoded ?? $resp];
+    if ($curl_error) {
+        error_log('[WhatsApp] cURL error: ' . $curl_error);
+        return ['ok' => false, 'code' => 0, 'body' => ['error' => $curl_error]];
+    }
+
+    $decoded = json_decode($respuesta, true) ?? [];
+    $ok      = ($codigo_http >= 200 && $codigo_http < 300);
+
+    if (!$ok) {
+        error_log('[WhatsApp] HTTP ' . $codigo_http . ' → ' . $respuesta);
+    }
+
+    return ['ok' => $ok, 'code' => $codigo_http, 'body' => $decoded];
 }
 
 /**
- * Notifica al dueño que un cliente pidió fiado.
+ * Notifica al dueño: "X pidió fiado por estos productos"
  *
- * @param  string $cliente   Nombre del cliente
- * @param  array  $items     Array de ['nombre'=>..., 'cantidad'=>..., 'precio'=>..., 'subtotal'=>...]
- * @param  float  $total     Total de la venta
- * @param  float  $adeudo_nuevo  Adeudo total del cliente después de esta venta
+ * Parámetros de la plantilla notificacion_fiado_interno:
+ *   {{1}} Nombre cliente
+ *   {{2}} Fecha
+ *   {{3}} Productos (una línea, separados por " | ")
+ *   {{4}} Total esta venta
+ *   {{5}} Adeudo total del cliente
+ *
+ * @param  string $cliente      Nombre del cliente
+ * @param  array  $items        [['nombre'=>..., 'cantidad'=>..., 'subtotal'=>...], ...]
+ * @param  float  $total_venta  Total de esta venta
+ * @param  float  $adeudo_nuevo Adeudo total después de esta compra
  * @return array
  */
-function wspNotificarFiado(string $cliente, array $items, float $total, float $adeudo_nuevo): array {
-    $fecha = date('d/m/Y H:i');
-    $lineas = '';
+function wspNotificarFiado(string $cliente, array $items, float $total_venta, float $adeudo_nuevo): array {
+    /* Formatear productos en UNA sola línea (límite ~160 chars para WhatsApp) */
+    $lineas = [];
     foreach ($items as $it) {
-        $lineas .= "\n  • {$it['nombre']} x{$it['cantidad']} = $" . number_format($it['subtotal'], 2);
+        $lineas[] = $it['nombre'] . ' x' . $it['cantidad'] . ' = $' . number_format($it['subtotal'], 2);
+    }
+    /* Si es muy largo, resumir */
+    $productos_str = implode(' | ', $lineas);
+    if (mb_strlen($productos_str) > 200) {
+        $productos_str = mb_substr($productos_str, 0, 197) . '...';
     }
 
-    $msg = "🛒 *RominaStore — Venta a Crédito*\n"
-         . "━━━━━━━━━━━━━━━━━━━━\n"
-         . "👤 Cliente: *{$cliente}*\n"
-         . "📅 Fecha: {$fecha}\n"
-         . "━━━━━━━━━━━━━━━━━━━━\n"
-         . "*Productos:*{$lineas}\n"
-         . "━━━━━━━━━━━━━━━━━━━━\n"
-         . "💵 Esta venta: *$" . number_format($total, 2) . "*\n"
-         . "📋 Adeudo total: *$" . number_format($adeudo_nuevo, 2) . "*";
-
-    return wspEnviar($msg);
+    return wspEnviarPlantilla([
+        $cliente,                                /* {{1}} */
+        date('d/m/Y H:i'),                       /* {{2}} */
+        $productos_str,                          /* {{3}} */
+        '$' . number_format($total_venta, 2),    /* {{4}} */
+        '$' . number_format($adeudo_nuevo, 2),   /* {{5}} */
+    ]);
 }
 
 /**
  * Notifica al dueño que un cliente realizó un abono.
+ * Usa la misma plantilla con parámetros adaptados.
  *
- * @param  string $cliente      Nombre del cliente
- * @param  float  $abono        Monto abonado
- * @param  float  $adeudo_resta Adeudo restante
- * @return array
+ * {{1}} Cliente
+ * {{2}} Fecha
+ * {{3}} "Abono realizado"
+ * {{4}} Monto del abono
+ * {{5}} Adeudo restante
  */
 function wspNotificarAbono(string $cliente, float $abono, float $adeudo_resta): array {
-    $fecha = date('d/m/Y H:i');
-    $estado = $adeudo_resta <= 0 ? '✅ ¡Cuenta saldada!' : "📋 Restante: *$" . number_format($adeudo_resta, 2) . "*";
-
-    $msg = "💳 *RominaStore — Abono Recibido*\n"
-         . "━━━━━━━━━━━━━━━━━━━━\n"
-         . "👤 Cliente: *{$cliente}*\n"
-         . "📅 Fecha: {$fecha}\n"
-         . "━━━━━━━━━━━━━━━━━━━━\n"
-         . "💵 Abono: *$" . number_format($abono, 2) . "*\n"
-         . "{$estado}";
-
-    return wspEnviar($msg);
+    return wspEnviarPlantilla([
+        $cliente,
+        date('d/m/Y H:i'),
+        'Abono realizado',
+        '$' . number_format($abono, 2),
+        '$' . number_format($adeudo_resta, 2),
+    ]);
 }

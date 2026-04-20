@@ -1,5 +1,5 @@
 <?php
-/* productos/agregar.php — Con carga de imagen */
+
 require_once '../includes/config.php';
 requerirAutenticacion();
 

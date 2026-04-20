@@ -1,8 +1,5 @@
 <?php
-/* ventas/procesar_venta.php
-   FIX: Re-verifica stock con FOR UPDATE antes de insertar.
-   Previene overselling en ventas concurrentes.
-*/
+
 require_once '../includes/config.php';
 requerirAutenticacion();
 

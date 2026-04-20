@@ -1,5 +1,5 @@
 <?php
-/* productos/listar.php — Lista con imágenes, thumbnails y opciones */
+
 require_once '../includes/config.php';
 requerirAutenticacion();
 

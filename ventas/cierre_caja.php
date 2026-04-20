@@ -1,5 +1,5 @@
 <?php
-/* ventas/cierre_caja.php — Cierre de Caja con Arqueo Inteligente */
+
 require_once '../includes/config.php';
 requerirAutenticacion();
 

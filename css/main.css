@@ -1,10 +1,8 @@
-/* =============================================
-   ROMINASTORE — Sistema de Diseño Principal
-   ============================================= */
+
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* ─── Variables ─── */
+
 :root {
   --verde:        #16a34a;
   --verde-claro:  #22c55e;
@@ -39,7 +37,7 @@
   --transicion:   all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ─── Reset base ─── */
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -50,7 +48,7 @@ body {
   min-height: 100vh;
 }
 
-/* ─── Topbar / Header compartido ─── */
+
 .topbar {
   background: var(--oscuro);
   color: var(--blanco);

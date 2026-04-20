@@ -1,5 +1,5 @@
 <?php
-/* productos/editar.php — Con cambio/eliminación de imagen */
+
 require_once '../includes/config.php';
 requerirAutenticacion();
 

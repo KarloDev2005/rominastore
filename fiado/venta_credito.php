@@ -1,5 +1,5 @@
 <?php
-/* fiado/venta_credito.php — Venta a Crédito con sidebar */
+
 require_once '../includes/config.php';
 requerirAutenticacion();
 
