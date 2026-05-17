@@ -17,7 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['usuario_id']     = $u['id_usuario'];
             $_SESSION['usuario_nombre'] = $u['nombre'];
             $_SESSION['rol']            = $u['rol'];
-            header('Location: dashboard.php'); exit();
+            header('Location: dashboard.php');
+           exit();
         } else {
             $error = 'Usuario o contraseña incorrectos.';
         }

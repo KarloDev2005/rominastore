@@ -1,5 +1,5 @@
 <?php
-
+/* productos/agregar.php — Con zona drag & drop visual */
 require_once '../includes/config.php';
 requerirAutenticacion();
 
@@ -16,22 +16,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $s->bind_param("sdi", $nombre, $precio, $stock);
         if ($s->execute()) {
             $id_nuevo = $conn->insert_id;
-
-            /* Subir imagen si se proporcionó */
             if (!empty($_FILES['imagen']['name'])) {
                 $res = subirImagenProducto($_FILES['imagen'], $id_nuevo);
                 if ($res['ok']) {
                     $ruta = $res['ruta'];
                     $s2 = $conn->prepare("UPDATE productos SET imagen=? WHERE id_producto=?");
-                    $s2->bind_param("si", $ruta, $id_nuevo);
-                    $s2->execute();
+                    $s2->bind_param("si", $ruta, $id_nuevo); $s2->execute();
                 } else {
-                    /* Producto guardado, pero imagen falló */
-                    flashSet('aviso', "Producto creado, pero la imagen no se pudo guardar: " . $res['msg']);
+                    flashSet('aviso', "Producto creado, pero la imagen no se procesó: " . $res['msg']);
                     header('Location: listar.php'); exit;
                 }
             }
-            flashSet('exito', "Producto «{$nombre}» creado correctamente.");
+            flashSet('exito', "Producto «{$nombre}» agregado correctamente.");
             header('Location: listar.php'); exit;
         } else {
             $error = 'Error al guardar: ' . $conn->error;
@@ -40,34 +36,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 layoutStart('Agregar Producto', 'productos', [
-    ['label'=>'Productos','url'=>'productos/listar.php'],
-    ['label'=>'Agregar']
+    ['label' => 'Productos', 'url' => 'productos/listar.php'],
+    ['label' => 'Agregar']
 ]);
 ?>
 
 <div class="page-head fade-up">
   <div class="page-title"><i class="fa-solid fa-plus"></i> Agregar Producto</div>
+  <div class="page-subtitle">Completa la información del nuevo producto</div>
 </div>
 
 <div style="max-width:540px" class="fade-up delay-1">
   <div class="card">
     <div class="card-body">
-      <?php if($error): ?><div class="alerta alerta-error"><i class="fa-solid fa-xmark"></i> <?=e($error)?></div><?php endif ?>
+      <?php if($error): ?>
+        <div class="alerta alerta-error"><i class="fa-solid fa-circle-xmark"></i> <?=e($error)?></div>
+      <?php endif ?>
 
       <form method="POST" enctype="multipart/form-data" class="con-spinner">
-        <!-- Datos básicos -->
+
         <div class="form-group">
           <label class="form-label"><i class="fa-solid fa-tag"></i> Nombre del producto</label>
-          <input type="text" name="nombre" class="form-control"
-                 required placeholder="Ej: Coca-Cola 600ml"
+          <input type="text" name="nombre" class="form-control" required
+                 placeholder="Ej: Coca-Cola 600ml"
                  value="<?=e($_POST['nombre']??'')?>">
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
           <div class="form-group">
             <label class="form-label"><i class="fa-solid fa-dollar-sign"></i> Precio de venta</label>
-            <input type="number" step="0.01" name="precio" class="form-control"
-                   required placeholder="0.00" value="<?=e($_POST['precio']??'')?>">
+            <input type="number" step="0.01" name="precio" class="form-control" required
+                   placeholder="0.00" value="<?=e($_POST['precio']??'')?>">
           </div>
           <div class="form-group">
             <label class="form-label"><i class="fa-solid fa-cubes"></i> Stock inicial</label>
@@ -76,27 +75,49 @@ layoutStart('Agregar Producto', 'productos', [
           </div>
         </div>
 
-        <!-- Sección imagen -->
-        <div class="form-group" id="img-section">
+        <!-- ZONA DRAG & DROP -->
+        <div class="form-group">
           <label class="form-label"><i class="fa-solid fa-image"></i> Imagen del producto</label>
-          <div class="file-upload-area" id="uploadArea">
-            <input type="file" name="imagen" accept=".jpg,.jpeg,.png,.webp"
-                   onchange="previsualizarImagen(this)">
-            <div id="uploadPlaceholder">
-              <div class="file-upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
-              <div class="file-upload-txt">Haz clic o arrastra una imagen aquí</div>
-              <div class="file-upload-sub">JPG, PNG, WEBP · Máx. 5 MB · Se recortará a 300×300 px</div>
+
+          <div class="file-drop-zone" id="dropZone">
+            <input type="file" name="imagen" id="imgInput"
+                   accept=".jpg,.jpeg,.png,.webp">
+
+            <!-- Contenido por defecto -->
+            <div class="fdz-content" id="fdzDefault">
+              <div class="fdz-icon-wrap">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+              </div>
+              <div class="fdz-title">Arrastra la imagen aquí</div>
+              <div class="fdz-subtitle">
+                o haz clic para seleccionar un archivo
+              </div>
+              <div class="fdz-formats">
+                <span class="fdz-badge">JPG</span>
+                <span class="fdz-badge">PNG</span>
+                <span class="fdz-badge">WEBP</span>
+                <span class="fdz-badge" style="background:rgba(124,31,160,.05);border-style:dashed">Máx. 5 MB · 300×300 px</span>
+              </div>
             </div>
-            <img id="imgPreview" src="" alt="Preview"
-                 style="display:none;width:120px;height:120px;object-fit:cover;border-radius:12px;border:2px solid var(--p1-b);margin:0 auto">
+
+            <!-- Preview al seleccionar -->
+            <div class="fdz-preview" id="fdzPreview">
+              <img id="fdzPreviewImg" src="" alt="Vista previa" class="fdz-preview-img">
+              <div class="fdz-preview-name" id="fdzPreviewName">archivo.jpg</div>
+              <button type="button" class="fdz-change-btn" onclick="resetDrop(event)">
+                <i class="fa-solid fa-arrows-rotate"></i> Cambiar imagen
+              </button>
+            </div>
           </div>
         </div>
 
-        <div style="display:flex;gap:.65rem;margin-top:.5rem">
+        <div style="display:flex;gap:.65rem;margin-top:.35rem">
           <button type="submit" class="btn btn-verde btn-lg">
             <i class="fa-solid fa-floppy-disk"></i> Guardar Producto
           </button>
-          <a href="listar.php" class="btn btn-gris btn-lg">Cancelar</a>
+          <a href="listar.php" class="btn btn-gris btn-lg">
+            <i class="fa-solid fa-xmark"></i> Cancelar
+          </a>
         </div>
       </form>
     </div>
@@ -104,18 +125,59 @@ layoutStart('Agregar Producto', 'productos', [
 </div>
 
 <script>
-function previsualizarImagen(input) {
-  const file = input.files[0];
-  if (!file) return;
+const dropZone   = document.getElementById('dropZone');
+const imgInput   = document.getElementById('imgInput');
+const fdzDefault = document.getElementById('fdzDefault');
+const fdzPreview = document.getElementById('fdzPreview');
+const prevImg    = document.getElementById('fdzPreviewImg');
+const prevName   = document.getElementById('fdzPreviewName');
+
+/* ── Selección por archivo ── */
+imgInput.addEventListener('change', () => {
+  const file = imgInput.files[0];
+  if (file) showPreview(file);
+});
+
+/* ── Drag events ── */
+['dragenter','dragover'].forEach(ev =>
+  dropZone.addEventListener(ev, e => {
+    e.preventDefault(); dropZone.classList.add('drag-over');
+  })
+);
+['dragleave','dragend'].forEach(ev =>
+  dropZone.addEventListener(ev, e => {
+    dropZone.classList.remove('drag-over');
+  })
+);
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && /^image\/(jpeg|png|webp)$/i.test(file.type)) {
+    /* Asignar al input para que el form lo envíe */
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    imgInput.files = dt.files;
+    showPreview(file);
+  }
+});
+
+function showPreview(file) {
   const reader = new FileReader();
   reader.onload = e => {
-    const prev = document.getElementById('imgPreview');
-    const ph   = document.getElementById('uploadPlaceholder');
-    prev.src = e.target.result;
-    prev.style.display = 'block';
-    ph.style.display   = 'none';
+    prevImg.src = e.target.result;
+    prevName.textContent = file.name;
+    fdzDefault.style.display = 'none';
+    fdzPreview.classList.add('show');
   };
   reader.readAsDataURL(file);
+}
+
+function resetDrop(event) {
+  event.stopPropagation();
+  imgInput.value = '';
+  prevImg.src = '';
+  fdzPreview.classList.remove('show');
+  fdzDefault.style.display = '';
 }
 </script>
 

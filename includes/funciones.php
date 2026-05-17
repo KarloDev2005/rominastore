@@ -120,19 +120,29 @@ function layoutStart($titulo='RominaStore', $activo='', $breadcrumbs=[]) {
     $ini  = strtoupper(substr(strip_tags($user), 0, 2)); // 2 letras para avatar
 
   
-    $nav = [
-        ['url'=>'dashboard.php',              'icon'=>'fa-solid fa-house',              'label'=>'Inicio',            'key'=>'dashboard'],
-        ['url'=>'ventas/nueva_venta.php',     'icon'=>'fa-solid fa-cash-register',      'label'=>'Punto de Venta',    'key'=>'pos'],
-        ['url'=>'fiado/venta_credito.php',    'icon'=>'fa-solid fa-credit-card',        'label'=>'Venta a Crédito',   'key'=>'credito'],
-        ['url'=>'fiado/consultar_adeudo.php', 'icon'=>'fa-solid fa-file-invoice-dollar','label'=>'Adeudos',           'key'=>'adeudos'],
-        ['url'=>'productos/listar.php',       'icon'=>'fa-solid fa-box',               'label'=>'Productos',         'key'=>'productos'],
-        ['url'=>'inventario/consultar.php',   'icon'=>'fa-solid fa-warehouse',         'label'=>'Inventario',        'key'=>'inventario'],
-        ['url'=>'clientes/listar.php',        'icon'=>'fa-solid fa-users',             'label'=>'Clientes',          'key'=>'clientes'],
-        ['url'=>'reportes/ventas.php',        'icon'=>'fa-solid fa-chart-line',        'label'=>'Reportes',          'key'=>'reportes'],
-        ['url'=>'ventas/cierre_caja.php',     'icon'=>'fa-solid fa-cash-register',     'label'=>'Cierre de Caja',    'key'=>'cierre'],
-    ];
-    if ($rol==='admin')
-        $nav[]=['url'=>'usuarios/listar.php','icon'=>'fa-solid fa-gear','label'=>'Usuarios','key'=>'usuarios'];
+        if ($rol === 'admin') {
+        $nav = [
+            ['url'=>'dashboard.php',              'icon'=>'fa-solid fa-house',              'label'=>'Inicio',            'key'=>'dashboard'],
+            ['url'=>'ventas/nueva_venta.php',     'icon'=>'fa-solid fa-cash-register',      'label'=>'Punto de Venta',    'key'=>'pos'],
+            ['url'=>'fiado/venta_credito.php',    'icon'=>'fa-solid fa-credit-card',        'label'=>'Venta a Crédito',   'key'=>'credito'],
+            ['url'=>'fiado/consultar_adeudo.php', 'icon'=>'fa-solid fa-file-invoice-dollar','label'=>'Adeudos',           'key'=>'adeudos'],
+            ['url'=>'productos/listar.php',       'icon'=>'fa-solid fa-box',               'label'=>'Productos',         'key'=>'productos'],
+            ['url'=>'inventario/consultar.php',   'icon'=>'fa-solid fa-warehouse',         'label'=>'Inventario',        'key'=>'inventario'],
+            ['url'=>'clientes/listar.php',        'icon'=>'fa-solid fa-users',             'label'=>'Clientes',          'key'=>'clientes'],
+            ['url'=>'reportes/ventas.php',        'icon'=>'fa-solid fa-chart-line',        'label'=>'Reportes',          'key'=>'reportes'],
+            ['url'=>'ventas/cierre_caja.php',     'icon'=>'fa-solid fa-cash-register',     'label'=>'Cierre de Caja',    'key'=>'cierre'],
+            ['url'=>'usuarios/listar.php',        'icon'=>'fa-solid fa-gear',              'label'=>'Usuarios',          'key'=>'usuarios'],
+        ];
+        } else {
+        // Cajero: Dashboard, Punto de Venta, Reportes y Cierre de Caja
+        $nav = [
+            ['url'=>'dashboard.php',            'icon'=>'fa-solid fa-house',          'label'=>'Inicio',         'key'=>'dashboard'],
+            ['url'=>'ventas/nueva_venta.php',   'icon'=>'fa-solid fa-cash-register',  'label'=>'Punto de Venta', 'key'=>'pos'],
+            ['url'=>'reportes/ventas.php',      'icon'=>'fa-solid fa-chart-line',     'label'=>'Reportes',       'key'=>'reportes'],
+            ['url'=>'ventas/cierre_caja.php',   'icon'=>'fa-solid fa-cash-register',  'label'=>'Cierre de Caja', 'key'=>'cierre'],
+        ];
+    }
+
 
 
     $bc='';
