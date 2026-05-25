@@ -25,7 +25,6 @@ if (isset($_GET['qty_id'], $_GET['qty_n'])) {
 if (isset($_GET['eliminar'])) { unset($_SESSION['carrito'][(int)$_GET['eliminar']]); header('Location: nueva_venta.php'); exit; }
 if (isset($_GET['vaciar']))   { $_SESSION['carrito'] = []; header('Location: nueva_venta.php'); exit; }
 
-/* Agregar — FIX: hidden input name="agregar" */
 if (isset($_POST['agregar'])) {
     $id  = (int)$_POST['id_producto'];
     $qty = max(1,(int)$_POST['cantidad']);
@@ -43,7 +42,6 @@ if (isset($_POST['agregar'])) {
                     'precio'=>(float)$p['precio'],'cantidad'=>$ya+$qty,
                     'imagen'=>$p['imagen'],
                 ];
-                /* Flag para microinteracción JS */
                 $_SESSION['ultimo_agregado'] = $p['nombre'];
             }
         } else { $error = "Producto no encontrado."; }
@@ -53,10 +51,8 @@ if (isset($_POST['agregar'])) {
 $total=0; $total_pzas=0;
 foreach ($_SESSION['carrito'] as $it) { $total+=$it['precio']*$it['cantidad']; $total_pzas+=$it['cantidad']; }
 
-/* Grid de productos */
 $grid = $conn->query("SELECT id_producto,nombre,precio,stock,imagen FROM productos WHERE stock>0 ORDER BY nombre LIMIT 60");
 
-/* Último agregado para toast */
 $ultimo_agregado = $_SESSION['ultimo_agregado'] ?? null;
 unset($_SESSION['ultimo_agregado']);
 
@@ -65,14 +61,14 @@ layoutStart('Punto de Venta','pos',[['label'=>'Punto de Venta']]);
 
 <style>
 /* ── POS Layout ── */
-.pos-wrap{display:grid;grid-template-columns:1fr 330px;gap:1.1rem;align-items:start}
+.pos-wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:1.1rem;align-items:start}
 
 /* Búsqueda */
 .search-wrap{position:relative;margin-bottom:1rem}
-.search-wrap input{width:100%;padding:.78rem 1rem .78rem 2.9rem;border:2px solid var(--g300);border-radius:11px;font-family:var(--font-body);font-size:.95rem;background:var(--blanco);color:var(--g900);outline:none;transition:var(--t-base)}
-.search-wrap input:focus{border-color:var(--p1);box-shadow:0 0 0 4px rgba(124,31,160,.1)}
+.search-wrap input{width:100%;padding:.82rem 1rem .82rem 2.9rem;border:1.5px solid var(--g300);border-radius:8px;font-family:var(--font-body);font-size:.95rem;background:var(--blanco);color:var(--g900);outline:none;transition:var(--t-base);box-shadow:var(--sh-xs)}
+.search-wrap input:focus{border-color:var(--p1);box-shadow:0 0 0 4px rgba(37,99,235,.12)}
 .search-wrap .si{position:absolute;left:.95rem;top:50%;transform:translateY(-50%);color:var(--g400);pointer-events:none}
-#ac{position:absolute;top:calc(100% + 5px);left:0;right:0;background:var(--blanco);border:1.5px solid var(--g200);border-radius:11px;box-shadow:var(--sh-md);z-index:200;max-height:290px;overflow-y:auto;display:none}
+#ac{position:absolute;top:calc(100% + 5px);left:0;right:0;background:var(--blanco);border:1.5px solid var(--g200);border-radius:8px;box-shadow:var(--sh-md);z-index:200;max-height:290px;overflow-y:auto;display:none}
 .ac-item{display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;cursor:pointer;border-bottom:1px solid var(--g100);transition:background .12s}
 .ac-item:hover{background:var(--p1-bg)}
 .ac-item:last-child{border-bottom:none}
@@ -88,25 +84,25 @@ layoutStart('Punto de Venta','pos',[['label'=>'Punto de Venta']]);
 .prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.7rem}
 
 .prod-card{
-  background:var(--blanco);border:1.5px solid var(--g200);border-radius:13px;
+  background:var(--blanco);border:1px solid var(--g200);border-radius:8px;
   cursor:pointer;transition:var(--t-base);position:relative;overflow:hidden;
   display:flex;flex-direction:column;
 }
-.prod-card:hover{border-color:var(--p1);transform:translateY(-3px);box-shadow:0 8px 24px rgba(124,31,160,.15)}
+.prod-card:hover{border-color:var(--p1);transform:translateY(-3px);box-shadow:0 10px 28px rgba(37,99,235,.16)}
 .prod-card:active{transform:translateY(-1px)}
 .prod-card.agotado{opacity:.45;cursor:not-allowed;pointer-events:none}
 
 /* Imagen del producto en grilla */
 .prod-card-img{
   width:100%;height:120px;object-fit:cover;
-  border-radius:11px 11px 0 0;
+  border-radius:8px 8px 0 0;
   cursor:zoom-in;
   transition:transform .25s ease;
 }
 .prod-card:hover .prod-card-img{transform:scale(1.05)}
 .prod-card-img-ph{
-  width:100%;height:120px;border-radius:11px 11px 0 0;
-  background:linear-gradient(135deg,var(--p1-bg),rgba(196,37,122,.06));
+  width:100%;height:120px;border-radius:8px 8px 0 0;
+  background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(20,184,166,.12));
   display:flex;align-items:center;justify-content:center;
   font-size:2.5rem;color:var(--p1-b);
 }
@@ -128,9 +124,10 @@ layoutStart('Punto de Venta','pos',[['label'=>'Punto de Venta']]);
   transition:var(--t-base);width:100%;display:flex;align-items:center;justify-content:center;gap:5px;
 }
 .prod-card:hover .prod-add-btn{background:var(--p1);color:#fff}
+.prod-add-btn.added{background:var(--verde);color:#fff}
 
 /* ── Carrito ── */
-.carrito-wrap{background:var(--blanco);border-radius:14px;border:1.5px solid var(--g200);box-shadow:var(--sh-md);position:sticky;top:calc(58px + 1.1rem);display:flex;flex-direction:column;max-height:calc(100vh - 80px);overflow:hidden}
+.carrito-wrap{background:var(--blanco);border-radius:8px;border:1px solid var(--g200);box-shadow:var(--sh-md);position:sticky;top:calc(58px + 1.1rem);display:flex;flex-direction:column;max-height:calc(100vh - 80px);overflow:hidden}
 .car-header{background:linear-gradient(135deg,var(--oscuro),var(--oscuro2));color:#fff;padding:.85rem 1rem;display:flex;align-items:center;justify-content:space-between}
 .car-header h3{font-family:var(--font-title);font-size:.88rem;font-weight:700}
 .car-cnt{background:var(--m1);color:#fff;font-size:.68rem;font-weight:800;padding:.15rem .55rem;border-radius:99px;font-family:var(--font-ui)}
@@ -138,7 +135,7 @@ layoutStart('Punto de Venta','pos',[['label'=>'Punto de Venta']]);
 .car-vacio{padding:2rem .5rem;text-align:center;color:var(--g400)}
 .car-vacio .cv-icon{font-size:1.8rem;margin-bottom:.5rem}
 .car-vacio p{font-size:.8rem;font-family:var(--font-body)}
-.car-item{background:var(--g50);border:1px solid var(--g100);border-radius:9px;padding:.6rem .75rem;margin-bottom:.45rem;animation:slideIn .2s ease;display:flex;flex-direction:column;gap:.35rem}
+.car-item{background:var(--g50);border:1px solid var(--g100);border-radius:8px;padding:.6rem .75rem;margin-bottom:.45rem;animation:slideIn .2s ease;display:flex;flex-direction:column;gap:.35rem}
 @keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 .ci-row1{display:flex;align-items:center;gap:.6rem}
 .ci-img{width:32px;height:32px;border-radius:7px;object-fit:cover;flex-shrink:0;border:1.5px solid var(--g200)}
@@ -156,8 +153,8 @@ layoutStart('Punto de Venta','pos',[['label'=>'Punto de Venta']]);
 .cf-total{display:flex;justify-content:space-between;align-items:center;border-top:2px solid var(--g900);margin-top:.45rem;padding-top:.5rem}
 .cf-total .lbl{font-family:var(--font-ui);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--g700)}
 .cf-total .monto{font-family:var(--font-mono);font-size:1.45rem;font-weight:900;color:var(--g900)}
-.btn-cobrar{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.78rem;margin-top:.65rem;background:linear-gradient(135deg,var(--p1),var(--m1));color:#fff;border:none;border-radius:11px;font-family:var(--font-ui);font-size:.92rem;font-weight:800;cursor:pointer;text-decoration:none;box-shadow:var(--sh-p1);transition:var(--t-base)}
-.btn-cobrar:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,31,160,.45)}
+.btn-cobrar{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.78rem;margin-top:.65rem;background:linear-gradient(135deg,var(--p1),var(--m1));color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-size:.92rem;font-weight:800;cursor:pointer;text-decoration:none;box-shadow:var(--sh-p1);transition:var(--t-base)}
+.btn-cobrar:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(37,99,235,.32)}
 .link-vaciar{display:block;text-align:center;font-size:.72rem;color:var(--g400);margin-top:.5rem;cursor:pointer;text-decoration:none;transition:color .15s;font-family:var(--font-body)}
 .link-vaciar:hover{color:var(--rojo)}
 .ef-box{margin-top:.7rem;border-top:1px dashed var(--g200);padding-top:.65rem}
@@ -255,12 +252,12 @@ layoutStart('Punto de Venta','pos',[['label'=>'Punto de Venta']]);
           </div>
           <div class="ci-row2">
             <div class="ci-qty">
-              <a href="?qty_id=<?=$id?>&qty_n=<?=max(0,$q-1)?>" class="qb del"
+              <a href="?qty_id=<?=$id?>&qty_n=<?=max(0,$q-1)?>" class="qb del" data-ajax-action="1"
                  title="<?=$q<=1?'Eliminar':'Reducir'?>">
                 <?=$q<=1?'<i class="fa-solid fa-xmark"></i>':'<i class="fa-solid fa-minus"></i>'?>
               </a>
               <span class="qv"><?=$q?></span>
-              <a href="?qty_id=<?=$id?>&qty_n=<?=$q+1?>" class="qb" title="Aumentar">
+              <a href="?qty_id=<?=$id?>&qty_n=<?=$q+1?>" class="qb" title="Aumentar" data-ajax-action="1">
                 <i class="fa-solid fa-plus"></i>
               </a>
             </div>
@@ -286,10 +283,10 @@ layoutStart('Punto de Venta','pos',[['label'=>'Punto de Venta']]);
           <span class="cambio-val" id="cambioValor">—</span>
         </div>
       </div>
-      <a href="procesar_venta.php" class="btn-cobrar">
+      <a href="procesar_venta.php" class="btn-cobrar" data-ajax-action="1">
         <i class="fa-solid fa-check"></i> Cobrar <?=dinero($total)?>
       </a>
-      <a href="?vaciar=1" class="link-vaciar" onclick="return confirm('¿Vaciar el carrito?')">
+      <a href="?vaciar=1" class="link-vaciar" data-ajax-action="1" onclick="return confirm('¿Vaciar el carrito?')">
         <i class="fa-solid fa-trash"></i> Vaciar carrito
       </a>
     </div>
@@ -298,41 +295,75 @@ layoutStart('Punto de Venta','pos',[['label'=>'Punto de Venta']]);
 
 </div>
 
-<!-- Formulario oculto — FIX: name="agregar" en hidden input -->
-<form method="POST" id="fAgregar" style="display:none">
+<form method="POST" id="fAgregar" data-ajax="main" style="display:none">
   <input type="hidden" name="agregar" value="1">
   <input type="hidden" name="id_producto" id="fId">
   <input type="hidden" name="cantidad"    id="fQty" value="1">
 </form>
 
 <script>
-/* ══ Último producto agregado → TOAST ══ */
+function notificarAgregado(){
+  mostrarToast("¡Agregado!", '<i class="fa-solid fa-check"></i>');
+}
 <?php if($ultimo_agregado): ?>
-document.addEventListener("DOMContentLoaded",()=>{
-  mostrarToast("¡«<?=addslashes($ultimo_agregado)?>» agregado!", "✓");
-});
+if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",notificarAgregado,{once:true});
+}else{
+  notificarAgregado();
+}
 <?php endif ?>
 
-/* ══ Agregar al carrito ══ */
-function agregarProducto(id, qty=1){
+var agregandoProducto=false;
+
+window.mostrarAgregadoPop=function(source){
+  if(!source) return;
+  const card = source.closest?.(".prod-card") || source;
+  const btn = card.querySelector?.(".prod-add-btn");
+
+  card.classList.remove("prod-card-pop");
+  void card.offsetWidth;
+  card.classList.add("prod-card-pop");
+
+  if(btn){
+    btn.classList.add("added");
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Agregado';
+  }
+
+  const rect = card.getBoundingClientRect();
+  const bubble = document.createElement("div");
+  bubble.className = "add-pop-bubble";
+  bubble.style.left = (rect.left + rect.width / 2) + "px";
+  bubble.style.top = Math.max(72, rect.top + 14) + "px";
+  bubble.innerHTML = '<span class="add-pop-check"><i class="fa-solid fa-check"></i></span><span>¡Agregado!</span>';
+  document.body.appendChild(bubble);
+  setTimeout(()=>bubble.remove(), 2050);
+}
+
+window.agregarProducto=function(id, qty=1, source=null){
+  if(agregandoProducto) return;
+  agregandoProducto=true;
   document.getElementById('fId').value  = id;
   document.getElementById('fQty').value = qty;
-  document.getElementById('fAgregar').submit();
+  if(source) mostrarAgregadoPop(source);
+  setTimeout(()=>{
+    const form=document.getElementById('fAgregar');
+    if(window.cargarPagina&&form.dataset.ajax==="main"){
+      if(form.requestSubmit) form.requestSubmit();
+      else form.dispatchEvent(new Event("submit",{bubbles:true,cancelable:true}));
+    }else{
+      form.submit();
+    }
+  }, source ? 520 : 120);
 }
 
-function agregarDesdeGrid(card){
+window.agregarDesdeGrid=function(card){
   if(card.classList.contains('agotado')) return;
-  /* Microinteracción POP en la tarjeta */
-  card.classList.remove('prod-card-pop');
-  void card.offsetWidth; // reflow
-  card.classList.add('prod-card-pop');
-  agregarProducto(card.dataset.id, 1);
+  agregarProducto(card.dataset.id, 1, card);
 }
 
-/* ══ Autocomplete búsqueda ══ */
-const inp = document.getElementById('buscarInput');
-const acEl = document.getElementById('ac');
-let tmr;
+var inp = document.getElementById('buscarInput');
+var acEl = document.getElementById('ac');
+var tmr;
 
 inp.addEventListener('input',()=>{
   const q = inp.value.trim();
@@ -352,7 +383,7 @@ inp.addEventListener('input',()=>{
           const imgHtml = p.imagen
             ? `<img src="<?=BASE_URL?>${p.imagen}" alt="" class="ac-img" onerror="this.style.display='none'">`
             : `<div class="ac-img-ph"><i class="fa-solid fa-box"></i></div>`;
-          return `<div class="ac-item" onclick="agregarProducto(${p.id_producto},1);acEl.style.display='none';inp.value=''">
+          return `<div class="ac-item" onclick="agregarProducto(${p.id_producto},1,this);acEl.style.display='none';inp.value=''">
             ${imgHtml}
             <div style="flex:1"><div class="ac-nombre">${p.nombre}</div><div class="ac-info">Stock: ${p.stock}</div></div>
             <div class="ac-precio">$${parseFloat(p.precio).toFixed(2)}</div>
@@ -365,7 +396,7 @@ inp.addEventListener('input',()=>{
 document.addEventListener('click',e=>{ if(!e.target.closest('.search-wrap')) acEl.style.display='none'; });
 
 /* ══ Calcular cambio ══ */
-function calcCambio(total){
+window.calcCambio=function(total){
   const ef  = parseFloat(document.getElementById('efectivo').value)||0;
   const lbl = document.getElementById('cambioLabel');
   const val = document.getElementById('cambioValor');

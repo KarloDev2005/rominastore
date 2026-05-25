@@ -33,15 +33,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <title>Iniciar Sesión — Abarrotes Romina</title>
   <link rel="icon" type="image/png" href="img/icono.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
-      --p1:#7c1fa0;--p2:#9b35bc;--p3:#6b1a8c;
-      --m1:#c4257a;--m2:#e84da0;
-      --cream:#faf8f5;--blanco:#ffffff;
+      --p1:#2563eb;--p2:#0ea5e9;--p3:#1d4ed8;
+      --m1:#14b8a6;--m2:#0f766e;
+      --cream:#f5f7fb;--blanco:#ffffff;
       --gris-100:#f0edf5;--gris-200:#e0d8ea;--gris-400:#9b8ab0;--gris-700:#3a2a50;
-      --fuente:'Nunito',sans-serif;
+      --fuente:'Plus Jakarta Sans','Inter',sans-serif;
     }
     html,body{height:100%;font-family:var(--fuente);overflow:hidden}
 
@@ -72,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* ── Panel izquierdo (morado) ── */
     .panel-izq{
-      background:linear-gradient(160deg,var(--p1) 0%,var(--p3) 45%,#3d1278 100%);
+      background:linear-gradient(160deg,#0f172a 0%,var(--p3) 52%,var(--m2) 100%);
       display:flex;flex-direction:column;
       align-items:center;justify-content:center;
       padding:2.5rem 2rem;
@@ -119,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       box-shadow:
         0 0 0 8px rgba(255,255,255,.12),
         0 0 0 16px rgba(255,255,255,.06),
-        0 16px 48px rgba(0,0,0,.3);
+        0 16px 48px rgba(0,0,0,.26);
       animation:logoFloat 4s ease-in-out infinite;
       transition:.3s;
     }
@@ -281,10 +282,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="izq-sub">Sistema POS · Gestión integral</div>
 
       <div class="feats">
-        <div class="feat"><div class="fdot">🛒</div>Punto de venta rápido</div>
-        <div class="feat"><div class="fdot">💳</div>Control de fiados y adeudos</div>
-        <div class="feat"><div class="fdot">📱</div>Notificaciones WhatsApp</div>
-        <div class="feat"><div class="fdot">📊</div>Reportes y estadísticas</div>
+        <div class="feat"><div class="fdot"><i class="fa-solid fa-cart-shopping"></i></div>Punto de venta rápido</div>
+        <div class="feat"><div class="fdot"><i class="fa-solid fa-credit-card"></i></div>Control de fiados y adeudos</div>
+        <div class="feat"><div class="fdot"><i class="fa-brands fa-whatsapp"></i></div>Notificaciones WhatsApp</div>
+        <div class="feat"><div class="fdot"><i class="fa-solid fa-chart-line"></i></div>Reportes y estadísticas</div>
       </div>
     </div>
 
@@ -304,7 +305,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <?php if($error): ?>
-          <div class="error-box">⛔ <?=e($error)?></div>
+          <div class="error-box"><i class="fa-solid fa-circle-exclamation"></i> <?=e($error)?></div>
         <?php endif ?>
 
         <form method="POST" autocomplete="off">
@@ -323,11 +324,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="field-wrap">
               <input type="password" id="password" name="password"
                      placeholder="••••••••" required>
-              <button type="button" class="toggle-pw" onclick="togglePw()" id="eyeBtn">👁</button>
+              <button type="button" class="toggle-pw" onclick="togglePw()" id="eyeBtn" aria-label="Mostrar contraseña"><i class="fa-solid fa-eye"></i></button>
             </div>
           </div>
 
-          <button type="submit" class="btn-ingresar">Ingresar →</button>
+          <button type="submit" class="btn-ingresar">Ingresar <i class="fa-solid fa-arrow-right"></i></button>
         </form>
 
         <div class="form-footer">
@@ -344,7 +345,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 function togglePw(){
   const i=document.getElementById('password'),b=document.getElementById('eyeBtn');
   i.type=i.type==='password'?'text':'password';
-  b.textContent=i.type==='password'?'👁':'🙈';
+  b.innerHTML=i.type==='password'?'<i class="fa-solid fa-eye"></i>':'<i class="fa-solid fa-eye-slash"></i>';
 }
 </script>
 </body>

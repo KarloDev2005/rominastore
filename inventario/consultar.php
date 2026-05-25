@@ -36,7 +36,7 @@ layoutStart('Inventario', 'inventario', [['label' => 'Inventario']]);
 </style>
 
 <div class="page-head">
-  <div class="page-title">🏬 Inventario</div>
+  <div class="page-title"><i class="fa-solid fa-warehouse"></i> Inventario</div>
   <div class="page-subtitle">Estado actual del stock de productos</div>
 </div>
 
@@ -66,17 +66,17 @@ layoutStart('Inventario', 'inventario', [['label' => 'Inventario']]);
 
 <?php if($counts['agotados']>0||$counts['bajos']>0): ?>
 <div class="alerta alerta-aviso">
-  ⚠ Atención: <?=(int)$counts['agotados']?> producto(s) agotado(s) y <?=(int)$counts['bajos']?> con stock bajo.
-  <a href="../productos/listar.php" style="margin-left:.5rem;color:var(--naranja);font-weight:800;text-decoration:none">Actualizar productos →</a>
+  <i class="fa-solid fa-triangle-exclamation"></i> Atención: <?=(int)$counts['agotados']?> producto(s) agotado(s) y <?=(int)$counts['bajos']?> con stock bajo.
+  <a href="../productos/listar.php" style="margin-left:.5rem;color:var(--naranja);font-weight:800;text-decoration:none">Actualizar productos <i class="fa-solid fa-arrow-right"></i></a>
 </div>
 <?php endif ?>
 
 <!-- Filtros -->
 <div class="inv-filtros">
   <a href="?filtro=todos"   class="inv-filtro <?=$filtro==='todos'?'activo':''?>">Todos (<?=(int)$counts['total']?>)</a>
-  <a href="?filtro=ok"      class="inv-filtro <?=$filtro==='ok'?'activo':''?>">✅ OK (<?=(int)$counts['ok']?>)</a>
-  <a href="?filtro=bajo"    class="inv-filtro <?=$filtro==='bajo'?'activo-naranja':''?>">⚠ Bajo (<?=(int)$counts['bajos']?>)</a>
-  <a href="?filtro=agotado" class="inv-filtro <?=$filtro==='agotado'?'activo-rojo':''?>">❌ Agotado (<?=(int)$counts['agotados']?>)</a>
+  <a href="?filtro=ok"      class="inv-filtro <?=$filtro==='ok'?'activo':''?>"><i class="fa-solid fa-circle-check"></i> OK (<?=(int)$counts['ok']?>)</a>
+  <a href="?filtro=bajo"    class="inv-filtro <?=$filtro==='bajo'?'activo-naranja':''?>"><i class="fa-solid fa-triangle-exclamation"></i> Bajo (<?=(int)$counts['bajos']?>)</a>
+  <a href="?filtro=agotado" class="inv-filtro <?=$filtro==='agotado'?'activo-rojo':''?>"><i class="fa-solid fa-circle-xmark"></i> Agotado (<?=(int)$counts['agotados']?>)</a>
 </div>
 
 <div class="card">
@@ -87,7 +87,7 @@ layoutStart('Inventario', 'inventario', [['label' => 'Inventario']]);
       </thead>
       <tbody>
         <?php if($resultado->num_rows===0): ?>
-          <tr><td colspan="5"><div class="empty-state"><div class="ei">✅</div><p>No hay productos en esta categoría.</p></div></td></tr>
+          <tr><td colspan="5"><div class="empty-state"><div class="ei"><i class="fa-solid fa-circle-check"></i></div><p>No hay productos en esta categoría.</p></div></td></tr>
         <?php else: ?>
           <?php while($p=$resultado->fetch_assoc()):
             if($p['stock']==0){$badge='badge-rojo';$txt='Agotado';}
@@ -102,7 +102,7 @@ layoutStart('Inventario', 'inventario', [['label' => 'Inventario']]);
             </td>
             <td><span class="badge <?=$badge?>"><?=$txt?></span></td>
             <td>
-              <a href="../productos/editar.php?id=<?=$p['id_producto']?>" class="btn btn-sm btn-naranja">✏ Actualizar stock</a>
+              <a href="../productos/editar.php?id=<?=$p['id_producto']?>" class="btn btn-sm btn-naranja"><i class="fa-solid fa-pen"></i> Actualizar stock</a>
             </td>
           </tr>
           <?php endwhile ?>

@@ -76,7 +76,7 @@ layoutStart('Productos', 'productos', [['label'=>'Productos']]);
       </thead>
       <tbody>
         <?php if($resultado->num_rows===0): ?>
-          <tr><td colspan="6"><div class="empty-state"><div class="ei">📦</div><p>No se encontraron productos.</p></div></td></tr>
+          <tr><td colspan="6"><div class="empty-state"><div class="ei"><i class="fa-solid fa-box-open"></i></div><p>No se encontraron productos.</p></div></td></tr>
         <?php else: ?>
           <?php while($p=$resultado->fetch_assoc()):
             $stockCls = $p['stock']==0 ? 'badge-rojo' : ($p['stock']<=5 ? 'badge-naranja' : 'badge-verde');

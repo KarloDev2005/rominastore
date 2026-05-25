@@ -16,10 +16,14 @@ $rd = $conn->query("SELECT COUNT(*) c, COALESCE(SUM(adeudo),0) t FROM clientes W
 $deuda = $rd->fetch_assoc();
 
 $rb = $conn->query("SELECT COUNT(*) c FROM productos WHERE stock<=5 AND stock>0");
-$stock_bajo = $rb->fetch_assoc()['c'];
+$stock_bajo = (int)$rb->fetch_assoc()['c'];
 
 $ra = $conn->query("SELECT COUNT(*) c FROM productos WHERE stock=0");
-$agotados = $ra->fetch_assoc()['c'];
+$agotados = (int)$ra->fetch_assoc()['c'];
+
+$rs = $conn->query("SELECT COUNT(*) c FROM productos WHERE stock>5");
+$stock_ok = (int)$rs->fetch_assoc()['c'];
+$inventario_total = $stock_ok + $stock_bajo + $agotados;
 
 /* ── Adeudos con atraso (NOTIFICACIONES) ── */
 $deudores_atraso = obtenerDeudoresAtraso($conn, 2, 5);
@@ -54,8 +58,8 @@ layoutStart('Inicio','dashboard',[]);
 <style>
 /* ── Banner ── */
 .dash-banner{
-  background:linear-gradient(135deg,#1a0a2e 0%,#2d1458 55%,#7c1fa0 100%);
-  border-radius:18px;padding:1.4rem 1.8rem;
+  background:linear-gradient(135deg,#0f172a 0%,#1d4ed8 58%,#0f766e 100%);
+  border-radius:10px;padding:1.35rem 1.6rem;
   margin-bottom:1.3rem;
   display:flex;align-items:center;justify-content:space-between;gap:1.5rem;
   overflow:hidden;position:relative;
@@ -69,7 +73,7 @@ layoutStart('Inicio','dashboard',[]);
 }
 .banner-left h2{font-family:var(--font-title);font-size:1.25rem;font-weight:900;color:#fff;letter-spacing:-.2px}
 .banner-left p{font-size:.78rem;color:rgba(255,255,255,.5);margin-top:.2rem}
-.banner-logo{height:72px;object-fit:contain;flex-shrink:0;border-radius:50%;border:3px solid rgba(255,255,255,.18);background:#fff;padding:4px;animation:floatY 4s ease-in-out infinite}
+.banner-logo{height:72px;object-fit:contain;flex-shrink:0;border-radius:12px;border:3px solid rgba(255,255,255,.18);background:#fff;padding:4px;animation:floatY 4s ease-in-out infinite}
 @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 
 /* ── Notificaciones de adeudo ── */
@@ -80,19 +84,32 @@ layoutStart('Inicio','dashboard',[]);
 @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.6}}
 
 /* ── Alerta stock ── */
-.alerta-stock{display:flex;align-items:center;gap:.75rem;padding:.75rem 1.1rem;background:var(--naranja-bg);border:1px solid var(--naranja-b);border-left:4px solid var(--naranja);border-radius:11px;margin-bottom:1.2rem;font-size:.82rem;color:#d97706;font-weight:700;animation:fadeUp .4s .1s ease both}
+.alerta-stock{display:flex;align-items:center;gap:.75rem;padding:.75rem 1.1rem;background:var(--naranja-bg);border:1px solid var(--naranja-b);border-left:4px solid var(--naranja);border-radius:8px;margin-bottom:1.2rem;font-size:.82rem;color:#d97706;font-weight:700;animation:fadeUp .4s .1s ease both}
 
 /* ── Grid principal ── */
-.dash-main{display:grid;grid-template-columns:1fr 320px;gap:1.1rem;align-items:start;animation:fadeUp .4s .15s ease both}
+.dash-main{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:1.1rem;align-items:start;animation:fadeUp .4s .15s ease both}
 .metrics-row{display:grid;grid-template-columns:1fr 1fr;gap:.85rem;margin-bottom:1.1rem}
+.analytics-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(250px,.75fr);gap:.85rem;align-items:stretch;margin-bottom:.85rem}
+.analytics-grid .chart-card{margin-bottom:0}
 
 /* Chart card */
-.chart-card{background:var(--bg-card);border-radius:14px;border:1px solid var(--border-card);box-shadow:var(--sh-sm);overflow:hidden;margin-bottom:.85rem;transition:var(--t-base)}
+.chart-card{background:var(--bg-card);border-radius:8px;border:1px solid var(--border-card);box-shadow:var(--sh-sm);overflow:hidden;margin-bottom:.85rem;transition:var(--t-base)}
 .chart-card:hover{box-shadow:var(--sh-md)}
 .chart-card-header{padding:.85rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .chart-card-header h3{font-family:var(--font-title);font-size:.87rem;font-weight:700;color:var(--txt-primary)}
 .ch-sub{font-size:.72rem;color:var(--txt-muted)}
 .chart-body{padding:.85rem 1rem}
+
+.donut-body{position:relative;min-height:236px;display:flex;flex-direction:column;justify-content:center;gap:.75rem}
+.donut-canvas-wrap{position:relative;height:178px;display:flex;align-items:center;justify-content:center}
+.donut-canvas-wrap canvas{max-height:178px}
+.donut-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.donut-center strong{display:block;font-family:var(--font-mono);font-size:1.3rem;font-weight:900;color:var(--txt-primary)}
+.donut-center span{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.45px;color:var(--txt-muted)}
+.inv-legend{display:grid;gap:.4rem}
+.inv-li{display:flex;align-items:center;justify-content:space-between;gap:.6rem;font-size:.72rem;color:var(--txt-secondary)}
+.inv-li b{font-family:var(--font-mono);font-size:.76rem;color:var(--txt-primary)}
+.inv-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:.35rem}
 
 /* Top productos */
 .tp-item{display:flex;align-items:center;gap:.65rem;padding:.5rem .55rem;border-radius:8px;transition:var(--t-fast)}
@@ -105,13 +122,13 @@ layoutStart('Inicio','dashboard',[]);
 
 /* Panel derecho */
 .right-panel{display:flex;flex-direction:column;gap:.85rem}
-.today-card{background:linear-gradient(135deg,#1a0a2e,#3d1a78);border-radius:16px;padding:1.25rem 1.3rem;color:#fff;position:relative;overflow:hidden;box-shadow:var(--sh-p1)}
-.today-card::after{content:'💰';font-size:3.5rem;position:absolute;right:-5px;bottom:-5px;opacity:.1}
+.today-card{background:linear-gradient(135deg,#0f172a,#1d4ed8);border-radius:10px;padding:1.25rem 1.3rem;color:#fff;position:relative;overflow:hidden;box-shadow:var(--sh-p1)}
+.today-card::after{content:'$';font-family:var(--font-mono);font-size:4rem;font-weight:800;position:absolute;right:10px;bottom:-20px;opacity:.12}
 .t-label{font-family:var(--font-ui);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;opacity:.65;margin-bottom:.25rem}
 .t-valor{font-family:var(--font-mono) !important;font-size:1.8rem;font-weight:700;color:#fff;font-feature-settings:"tnum" 1}
 .t-sub{font-size:.72rem;opacity:.5;margin-top:.2rem}
 
-.recent-card{background:var(--bg-card);border-radius:14px;border:1px solid var(--border-card);box-shadow:var(--sh-sm);overflow:hidden}
+.recent-card{background:var(--bg-card);border-radius:8px;border:1px solid var(--border-card);box-shadow:var(--sh-sm);overflow:hidden}
 .rc-header{padding:.75rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .rc-header h3{font-family:var(--font-title);font-size:.85rem;font-weight:700;color:var(--txt-primary)}
 .rc-item{display:flex;align-items:center;gap:.7rem;padding:.6rem 1rem;border-bottom:1px solid var(--border);transition:background .12s}
@@ -123,12 +140,13 @@ layoutStart('Inicio','dashboard',[]);
 .rc-money{font-family:var(--font-mono) !important;font-size:.82rem;font-weight:700;color:var(--verde);white-space:nowrap;font-feature-settings:"tnum" 1}
 
 /* Quick grid */
-.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem;background:var(--bg-card);border-radius:14px;border:1px solid var(--border-card);box-shadow:var(--sh-sm);padding:.85rem}
-.qb{display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:.75rem .35rem;background:var(--bg-app);border-radius:11px;text-decoration:none;color:var(--txt-secondary);font-family:var(--font-ui);font-size:.68rem;font-weight:700;text-align:center;line-height:1.3;transition:var(--t-base);border:1.5px solid transparent}
+.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem;background:var(--bg-card);border-radius:8px;border:1px solid var(--border-card);box-shadow:var(--sh-sm);padding:.85rem}
+.qb{display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:.75rem .35rem;background:var(--bg-app);border-radius:8px;text-decoration:none;color:var(--txt-secondary);font-family:var(--font-ui);font-size:.68rem;font-weight:700;text-align:center;line-height:1.3;transition:var(--t-base);border:1.5px solid transparent}
 .qb:hover{background:var(--p1-bg);border-color:var(--p1-b);color:var(--p1);transform:translateY(-2px)}
 .qb .qi{font-size:1.3rem;display:block;transition:transform .2s}
 .qb:hover .qi{transform:scale(1.18)}
 
+@media(max-width:1100px){.analytics-grid{grid-template-columns:1fr}}
 @media(max-width:800px){.dash-main{grid-template-columns:1fr}}
 @media(max-width:550px){.metrics-row{grid-template-columns:1fr}}
 </style>
@@ -136,7 +154,7 @@ layoutStart('Inicio','dashboard',[]);
 <!-- Banner -->
 <div class="dash-banner">
   <div class="banner-left">
-    <h2>¡Hola, <?=e(nombreUsuario())?>! 👋</h2>
+    <h2>Hola, <?=e(nombreUsuario())?></h2>
     <p><?=date('l j \d\e F \d\e Y')?> · <?=ucfirst(rolActual())?></p>
   </div>
   <img src="img/icono.png" alt="Logo" class="banner-logo">
@@ -151,7 +169,7 @@ layoutStart('Inicio','dashboard',[]);
   </div>
   <?php foreach($deudores_atraso as $d): ?>
   <div class="debt-notif">
-    <div class="debt-icon">⚠️</div>
+    <div class="debt-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
     <div class="debt-info">
       <div class="debt-name"><?=e($d['nombre'])?></div>
       <div class="debt-detail">
@@ -177,25 +195,25 @@ layoutStart('Inicio','dashboard',[]);
 <!-- Métricas -->
 <div class="metrics-row fade-up delay-2" style="grid-template-columns:repeat(auto-fit,minmax(168px,1fr))">
   <a class="metric-card morado" href="reportes/ventas.php?fecha_inicio=<?=$hoy?>&fecha_fin=<?=$hoy?>" style="text-decoration:none;display:block">
-    <div class="metric-icon">💰</div>
+    <div class="metric-icon mi-azul"><i class="fa-solid fa-cash-register"></i></div>
     <div class="metric-label">Ventas de hoy</div>
     <div class="metric-valor"><?=dinero($hoy_v['t'])?></div>
     <div class="metric-sub"><?=(int)$hoy_v['c']?> transacciones</div>
   </a>
   <a class="metric-card magenta" href="reportes/ventas.php" style="text-decoration:none;display:block">
-    <div class="metric-icon">📅</div>
+    <div class="metric-icon mi-magenta"><i class="fa-solid fa-calendar-days"></i></div>
     <div class="metric-label">Ventas del mes</div>
     <div class="metric-valor"><?=dinero($mes_v['t'])?></div>
     <div class="metric-sub"><?=(int)$mes_v['c']?> ventas</div>
   </a>
   <a class="metric-card rojo" href="fiado/consultar_adeudo.php" style="text-decoration:none;display:block">
-    <div class="metric-icon">💳</div>
+    <div class="metric-icon mi-rojo"><i class="fa-solid fa-credit-card"></i></div>
     <div class="metric-label">Por cobrar</div>
     <div class="metric-valor"><?=dinero($deuda['t'])?></div>
     <div class="metric-sub"><?=(int)$deuda['c']?> clientes</div>
   </a>
   <a class="metric-card naranja" href="inventario/consultar.php" style="text-decoration:none;display:block">
-    <div class="metric-icon">📦</div>
+    <div class="metric-icon mi-naranja"><i class="fa-solid fa-boxes-stacked"></i></div>
     <div class="metric-label">Agotados</div>
     <div class="metric-valor num"><?=$agotados?></div>
     <div class="metric-sub"><?=$stock_bajo?> con stock bajo</div>
@@ -205,12 +223,35 @@ layoutStart('Inicio','dashboard',[]);
 <div class="dash-main">
   <!-- Columna izquierda -->
   <div>
-    <div class="chart-card">
-      <div class="chart-card-header">
-        <h3><i class="fa-solid fa-chart-line" style="color:var(--p1);margin-right:.35rem"></i>Ventas últimos 7 días</h3>
-        <span class="ch-sub">Histórico diario</span>
+    <div class="analytics-grid">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h3><i class="fa-solid fa-chart-line" style="color:var(--p1);margin-right:.35rem"></i>Ventas últimos 7 días</h3>
+          <span class="ch-sub">Histórico diario</span>
+        </div>
+        <div class="chart-body"><canvas id="chartSemana" height="140"></canvas></div>
       </div>
-      <div class="chart-body"><canvas id="chartSemana" height="140"></canvas></div>
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h3><i class="fa-solid fa-chart-pie" style="color:var(--m1);margin-right:.35rem"></i>Inventario</h3>
+          <span class="ch-sub">Estado de stock</span>
+        </div>
+        <div class="chart-body donut-body">
+          <div class="donut-canvas-wrap">
+            <canvas id="chartInventario"></canvas>
+            <div class="donut-center">
+              <strong><?=$inventario_total?></strong>
+              <span>productos</span>
+            </div>
+          </div>
+          <div class="inv-legend">
+            <div class="inv-li"><span><i class="inv-dot" style="background:#16a34a"></i>Disponible</span><b><?=$stock_ok?></b></div>
+            <div class="inv-li"><span><i class="inv-dot" style="background:#f59e0b"></i>Stock bajo</span><b><?=$stock_bajo?></b></div>
+            <div class="inv-li"><span><i class="inv-dot" style="background:#dc2626"></i>Agotado</span><b><?=$agotados?></b></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="chart-card">
@@ -219,7 +260,7 @@ layoutStart('Inicio','dashboard',[]);
       </div>
       <div class="chart-body">
         <?php if(empty($top_arr)): ?>
-          <div class="empty-state" style="padding:1rem"><div class="ei">📦</div><p>Sin datos de ventas aún.</p></div>
+          <div class="empty-state" style="padding:1rem"><div class="ei"><i class="fa-solid fa-box-open"></i></div><p>Sin datos de ventas aún.</p></div>
         <?php else: ?>
           <?php foreach($top_arr as $i=>$tp): $pct=$max_u>0?round(($tp['u']/$max_u)*100):0; ?>
           <div class="tp-item">
@@ -246,11 +287,11 @@ layoutStart('Inicio','dashboard',[]);
 
     <div class="recent-card">
       <div class="rc-header">
-        <h3>🕐 Recientes</h3>
+        <h3><i class="fa-solid fa-clock-rotate-left" style="color:var(--p1);margin-right:.35rem"></i>Recientes</h3>
         <a href="reportes/ventas.php" class="btn btn-sm btn-gris">Ver todas</a>
       </div>
       <?php if($ultimas->num_rows===0): ?>
-        <div class="empty-state" style="padding:1.5rem"><div class="ei">🧾</div><p>Sin ventas aún.</p></div>
+        <div class="empty-state" style="padding:1.5rem"><div class="ei"><i class="fa-solid fa-receipt"></i></div><p>Sin ventas aún.</p></div>
       <?php else: ?>
         <?php while($v=$ultimas->fetch_assoc()): $ini_c=strtoupper(substr($v['cliente'],0,1)); ?>
         <div class="rc-item">
@@ -266,12 +307,12 @@ layoutStart('Inicio','dashboard',[]);
     </div>
 
     <div class="quick-grid">
-      <a href="ventas/nueva_venta.php"     class="qb"><span class="qi">🛒</span>Nueva Venta</a>
-      <a href="fiado/venta_credito.php"    class="qb"><span class="qi">💳</span>Dar Fiado</a>
-      <a href="fiado/consultar_adeudo.php" class="qb"><span class="qi">📋</span>Cobrar</a>
-      <a href="productos/agregar.php"      class="qb"><span class="qi">➕</span>Producto</a>
-      <a href="clientes/agregar.php"       class="qb"><span class="qi">👤</span>Cliente</a>
-      <a href="ventas/cierre_caja.php"     class="qb"><span class="qi">🔒</span>Cerrar Caja</a>
+      <a href="ventas/nueva_venta.php"     class="qb"><span class="qi"><i class="fa-solid fa-cart-shopping"></i></span>Nueva Venta</a>
+      <a href="fiado/venta_credito.php"    class="qb"><span class="qi"><i class="fa-solid fa-credit-card"></i></span>Dar Fiado</a>
+      <a href="fiado/consultar_adeudo.php" class="qb"><span class="qi"><i class="fa-solid fa-file-invoice-dollar"></i></span>Cobrar</a>
+      <a href="productos/agregar.php"      class="qb"><span class="qi"><i class="fa-solid fa-plus"></i></span>Producto</a>
+      <a href="clientes/agregar.php"       class="qb"><span class="qi"><i class="fa-solid fa-user-plus"></i></span>Cliente</a>
+      <a href="ventas/cierre_caja.php"     class="qb"><span class="qi"><i class="fa-solid fa-lock"></i></span>Cerrar Caja</a>
     </div>
   </div>
 </div>
@@ -279,16 +320,17 @@ layoutStart('Inicio','dashboard',[]);
 <!-- Chart.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-const morado='#7c1fa0',magenta='#c4257a';
-const isDark=document.getElementById("htmlRoot").classList.contains("dark");
-const gridColor=isDark?'rgba(255,255,255,.06)':'rgba(0,0,0,.04)';
-const tickColor=isDark?'#7a6890':'#9888b0';
+var azul='#2563eb', teal='#14b8a6', verde='#16a34a', naranja='#f59e0b', rojo='#dc2626';
+var isDark=document.getElementById("htmlRoot").classList.contains("dark");
+var gridColor=isDark?'rgba(255,255,255,.07)':'rgba(15,23,42,.06)';
+var tickColor=isDark?'#94a3b8':'#64748b';
 
-Chart.defaults.font.family='JetBrains Mono';
+Chart.defaults.font.family='Plus Jakarta Sans';
+Chart.defaults.color=tickColor;
 
-const cfg={
+var cfg={
   plugins:{legend:{display:false},tooltip:{
-    backgroundColor:'rgba(26,10,46,.92)',titleColor:'#fff',bodyColor:'rgba(255,255,255,.75)',
+    backgroundColor:'rgba(15,23,42,.94)',titleColor:'#fff',bodyColor:'rgba(255,255,255,.82)',
     padding:10,cornerRadius:8,
     callbacks:{label:c=>' $'+c.parsed.y.toLocaleString('es-MX',{minimumFractionDigits:2})}
   }},
@@ -307,16 +349,46 @@ new Chart(document.getElementById('chartSemana'),{
     labels:<?=json_encode($labels_semana)?>,
     datasets:[{
       data:<?=json_encode($ventas_semana)?>,
-      borderColor:morado,borderWidth:2.5,tension:.42,
-      pointBackgroundColor:morado,pointRadius:4,pointHoverRadius:6,
+      borderColor:azul,borderWidth:2.5,tension:.42,
+      pointBackgroundColor:'#fff',pointBorderColor:azul,pointBorderWidth:2,pointRadius:4,pointHoverRadius:6,
       fill:true,
       backgroundColor:ctx=>{
         const g=ctx.chart.ctx.createLinearGradient(0,0,0,200);
-        g.addColorStop(0,'rgba(124,31,160,.2)');g.addColorStop(1,'rgba(124,31,160,0)');return g;
+        g.addColorStop(0,'rgba(37,99,235,.2)');g.addColorStop(1,'rgba(20,184,166,0)');return g;
       }
     }]
   },
   options:{...cfg,scales:{...cfg.scales,y:{...cfg.scales.y,beginAtZero:true}}}
+});
+
+new Chart(document.getElementById('chartInventario'),{
+  type:'doughnut',
+  data:{
+    labels:['Disponible','Stock bajo','Agotado'],
+    datasets:[{
+      data:[<?=$stock_ok?>,<?=$stock_bajo?>,<?=$agotados?>],
+      backgroundColor:[verde,naranja,rojo],
+      borderWidth:0,
+      hoverOffset:6
+    }]
+  },
+  options:{
+    responsive:true,
+    maintainAspectRatio:false,
+    cutout:'68%',
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        backgroundColor:'rgba(15,23,42,.94)',
+        titleColor:'#fff',
+        bodyColor:'rgba(255,255,255,.82)',
+        padding:10,
+        cornerRadius:8,
+        callbacks:{label:c=>` ${c.label}: ${c.parsed} productos`}
+      }
+    },
+    animation:{duration:900,easing:'easeOutQuart'}
+  }
 });
 </script>
 

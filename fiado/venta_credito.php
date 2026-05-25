@@ -275,28 +275,34 @@ layoutStart('Ventas a Crédito', 'credito', [['label'=>'Ventas a Crédito']]);
 </div>
 
 <!-- Formulario oculto — FIX: input hidden name="agregar" -->
-<form method="POST" id="fAgregar2" style="display:none">
+<form method="POST" id="fAgregar2" data-ajax="main" style="display:none">
   <input type="hidden" name="agregar" value="1">
   <input type="hidden" name="id_producto" id="fId2">
   <input type="hidden" name="cantidad"    id="fQty2" value="1">
 </form>
 
 <script>
-function agregarProducto2(id,qty=1){
+window.agregarProducto2=function(id,qty=1){
   document.getElementById('fId2').value=id;
   document.getElementById('fQty2').value=qty;
-  document.getElementById('fAgregar2').submit();
+  const form=document.getElementById('fAgregar2');
+  if(window.cargarPagina&&form.dataset.ajax==="main"){
+    if(form.requestSubmit) form.requestSubmit();
+    else form.dispatchEvent(new Event("submit",{bubbles:true,cancelable:true}));
+  }else{
+    form.submit();
+  }
 }
-function agregarDesdeGrid2(card){
+window.agregarDesdeGrid2=function(card){
   if(card.classList.contains('agotado')) return;
   if(!card.dataset.stock||parseInt(card.dataset.stock)===0) return;
   card.style.opacity='.6';
   agregarProducto2(card.dataset.id,1);
 }
 
-const inp2=document.getElementById('buscarInput2');
-const ac2=document.getElementById('ac2');
-let tmr2;
+var inp2=document.getElementById('buscarInput2');
+var ac2=document.getElementById('ac2');
+var tmr2;
 inp2.addEventListener('input',()=>{
   const q=inp2.value.trim();
   document.querySelectorAll('#prodGrid2 .prod-card').forEach(c=>{

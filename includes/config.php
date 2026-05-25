@@ -15,9 +15,20 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-define('BASE_URL', 'http://localhost:8080/rominastore/');
-define('BASE_PATH', 'C:/xampp/htdocs/rominastore/');
-// ↑ ajusta la ruta real de tu instalación
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+$projectDir = basename(dirname(__DIR__));
+$projectSegment = '/' . $projectDir . '/';
+
+if (strpos($scriptName, $projectSegment) !== false) {
+    $basePathUrl = substr($scriptName, 0, strpos($scriptName, $projectSegment) + strlen($projectSegment));
+} else {
+    $basePathUrl = '/';
+}
+
+define('BASE_URL', $scheme . '://' . $host . $basePathUrl);
+define('BASE_PATH', rtrim(str_replace('\\', '/', dirname(__DIR__)), '/') . '/');
 
 // Incluir funciones
 require_once __DIR__ . '/funciones.php';

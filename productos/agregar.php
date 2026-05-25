@@ -125,12 +125,12 @@ layoutStart('Agregar Producto', 'productos', [
 </div>
 
 <script>
-const dropZone   = document.getElementById('dropZone');
-const imgInput   = document.getElementById('imgInput');
-const fdzDefault = document.getElementById('fdzDefault');
-const fdzPreview = document.getElementById('fdzPreview');
-const prevImg    = document.getElementById('fdzPreviewImg');
-const prevName   = document.getElementById('fdzPreviewName');
+var dropZone   = document.getElementById('dropZone');
+var imgInput   = document.getElementById('imgInput');
+var fdzDefault = document.getElementById('fdzDefault');
+var fdzPreview = document.getElementById('fdzPreview');
+var prevImg    = document.getElementById('fdzPreviewImg');
+var prevName   = document.getElementById('fdzPreviewName');
 
 /* ── Selección por archivo ── */
 imgInput.addEventListener('change', () => {

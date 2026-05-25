@@ -164,7 +164,7 @@ function layoutStart($titulo='RominaStore', $activo='', $breadcrumbs=[]) {
   <title>'.e($titulo).' — Abarrotes Romina</title>
   <link rel="icon" type="image/png" href="'.$base.'img/icono.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=Montserrat:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="'.$base.'css/app.css">
   <script>
@@ -176,6 +176,8 @@ function layoutStart($titulo='RominaStore', $activo='', $breadcrumbs=[]) {
   </script>
 </head>
 <body>
+
+<div class="nav-progress" aria-hidden="true"></div>
 
 <!-- Spinner -->
 <div class="spinner-overlay" id="spinnerOverlay">
@@ -417,23 +419,157 @@ document.querySelectorAll("form.con-spinner").forEach(f=>{
   f.addEventListener("submit",()=>mostrarSpinner());
 });
 
+function activarTransicionPagina(){
+  document.body.classList.add("is-navigating");
+  document.querySelector(".page-area")?.setAttribute("aria-busy","true");
+}
+
+function finalizarTransicionPagina(){
+  document.body.classList.remove("is-navigating");
+  document.querySelector(".page-area")?.removeAttribute("aria-busy");
+}
+
+function puedeCargarDinamico(url){
+  if(!("fetch" in window)||!("DOMParser" in window)||!("history" in window)) return false;
+  if(url.origin!==location.origin) return false;
+  if(url.searchParams.has("csv")) return false;
+  if(url.pathname.endsWith("/logout.php")||url.pathname.endsWith("/index.php")) return false;
+  return true;
+}
+
+function actualizarNavActivo(doc){
+  const nuevoActivo=doc.querySelector(".nav-item.activo");
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("activo"));
+  if(!nuevoActivo) return;
+  const destino=new URL(nuevoActivo.getAttribute("href"),location.href);
+  document.querySelectorAll(".nav-item[href]").forEach(n=>{
+    const actual=new URL(n.getAttribute("href"),location.href);
+    if(actual.pathname===destino.pathname) n.classList.add("activo");
+  });
+}
+
+async function ejecutarScriptsPagina(contenedor){
+  const scripts=[...contenedor.querySelectorAll("script")];
+  for(const old of scripts){
+    await new Promise(resolve=>{
+      const s=document.createElement("script");
+      [...old.attributes].forEach(attr=>s.setAttribute(attr.name,attr.value));
+      s.async=false;
+      if(old.src){
+        s.onload=resolve;
+        s.onerror=resolve;
+        s.src=old.src;
+      }else{
+        s.textContent=old.textContent;
+      }
+      old.replaceWith(s);
+      if(!old.src) resolve();
+    });
+  }
+}
+
+function programarAlertas(){
+  setTimeout(()=>{
+    document.querySelectorAll(".alerta").forEach(el=>{
+      el.style.transition="opacity .4s,transform .4s";
+      el.style.opacity="0"; el.style.transform="translateY(-5px)";
+      setTimeout(()=>el.remove(),400);
+    });
+  },3800);
+}
+
+async function cargarPagina(url, opciones={}){
+  const destino=new URL(url,location.href);
+  if(!puedeCargarDinamico(destino)){
+    location.href=destino.href;
+    return;
+  }
+
+  const metodo=(opciones.method||"GET").toUpperCase();
+  const fetchOpts={
+    method:metodo,
+    credentials:"same-origin",
+    headers:{"X-Requested-With":"fetch"}
+  };
+  if(opciones.body) fetchOpts.body=opciones.body;
+
+  activarTransicionPagina();
+  try{
+    const res=await fetch(destino.href,fetchOpts);
+    const html=await res.text();
+    const doc=new DOMParser().parseFromString(html,"text/html");
+    const nuevaArea=doc.querySelector(".page-area");
+    if(!nuevaArea){
+      location.href=res.url||destino.href;
+      return;
+    }
+
+    const area=document.querySelector(".page-area");
+    const nuevaBc=doc.querySelector(".topbar-breadcrumb");
+    const bc=document.querySelector(".topbar-breadcrumb");
+    if(bc&&nuevaBc) bc.innerHTML=nuevaBc.innerHTML;
+    document.title=doc.title||document.title;
+    area.innerHTML=nuevaArea.innerHTML;
+    actualizarNavActivo(doc);
+    closeSidebar();
+    await ejecutarScriptsPagina(area);
+    programarAlertas();
+
+    const finalUrl=res.url||destino.href;
+    if(opciones.push) history.pushState({pjax:true},"",finalUrl);
+    else history.replaceState({pjax:true},"",finalUrl);
+  }catch(err){
+    location.href=destino.href;
+  }finally{
+    requestAnimationFrame(()=>finalizarTransicionPagina());
+  }
+}
+window.cargarPagina=cargarPagina;
+
+document.addEventListener("click",e=>{
+  const a=e.target.closest("a[href]");
+  if(!a||e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey) return;
+  if(a.target==="_blank"||a.hasAttribute("download")||a.dataset.noTransition==="1") return;
+  const raw=a.getAttribute("href")||"";
+  if(!raw||raw.startsWith("#")||raw.startsWith("javascript:")||raw.startsWith("mailto:")) return;
+  const url=new URL(raw,location.href);
+  if(!puedeCargarDinamico(url)) return;
+  e.preventDefault();
+  cargarPagina(url.href,{push:a.dataset.ajaxAction!=="1"});
+});
+
+document.addEventListener("submit",e=>{
+  const form=e.target.closest("form[data-ajax=\"main\"]");
+  if(!form) return;
+  const method=(form.method||"GET").toUpperCase();
+  const enctype=(form.enctype||"").toLowerCase();
+  if(enctype.includes("multipart")) return;
+  e.preventDefault();
+  const action=new URL(form.getAttribute("action")||location.href,location.href);
+  const data=new FormData(form);
+  if(method==="GET"){
+    data.forEach((value,key)=>action.searchParams.set(key,value));
+    cargarPagina(action.href,{push:false});
+  }else{
+    cargarPagina(action.href,{method:"POST",body:data,push:false});
+  }
+});
+
+window.addEventListener("popstate",()=>cargarPagina(location.href,{push:false}));
+
+window.addEventListener("pageshow",()=>finalizarTransicionPagina());
+
 /* ════ TOAST ════ */
-function mostrarToast(msg="¡Agregado!", icono="✓", duracion=2200){
+function mostrarToast(msg="¡Agregado!", icono="✓", duracion=2000){
   const t=document.createElement("div");
   t.className="toast-pop";
-  t.innerHTML=`<span style="font-size:1.1rem">${icono}</span> ${msg}`;
+  t.innerHTML=`<span class="toast-check">${icono}</span><span>${msg}</span>`;
   document.body.appendChild(t);
   setTimeout(()=>{ t.classList.add("hide"); setTimeout(()=>t.remove(),350); }, duracion);
 }
 
 /* ════ AUTO-OCULTAR ALERTAS ════ */
-setTimeout(()=>{
-  document.querySelectorAll(".alerta").forEach(el=>{
-    el.style.transition="opacity .4s,transform .4s";
-    el.style.opacity="0"; el.style.transform="translateY(-5px)";
-    setTimeout(()=>el.remove(),400);
-  });
-},3800);
+programarAlertas();
 </script>
 </body>
 </html>';

@@ -59,8 +59,8 @@ layoutStart('Cierre de Caja','cierre',[['label'=>'Cierre de Caja']]);
 
 <style>
 .caja-header-card{
-  background:linear-gradient(135deg,#1a0a2e,#3d1a78);
-  border-radius:18px;padding:1.4rem 1.8rem;margin-bottom:1.3rem;
+  background:linear-gradient(135deg,#0f172a 0%,#1d4ed8 58%,#0f766e 100%);
+  border-radius:10px;padding:1.4rem 1.8rem;margin-bottom:1.3rem;
   color:#fff;box-shadow:var(--sh-p1);
   display:flex;align-items:center;justify-content:space-between;
 }
@@ -82,9 +82,9 @@ layoutStart('Cierre de Caja','cierre',[['label'=>'Cierre de Caja']]);
 .turno-total .val{font-family:var(--font-mono) !important;font-size:1.35rem;font-weight:900;color:var(--txt-primary);font-feature-settings:"tnum" 1}
 
 /* Formulario de arqueo */
-.arqueo-card{background:var(--bg-card);border-radius:14px;border:1px solid var(--border-card);box-shadow:var(--sh-sm);overflow:hidden}
+.arqueo-card{background:var(--bg-card);border-radius:8px;border:1px solid var(--border-card);box-shadow:var(--sh-sm);overflow:hidden}
 .arqueo-header{
-  background:linear-gradient(135deg,#1a0a2e,#2d1458);
+  background:linear-gradient(135deg,#0f172a,#1e293b);
   padding:.85rem 1.1rem;color:#fff;
   font-family:var(--font-title);font-size:.9rem;font-weight:700;
 }
@@ -92,7 +92,7 @@ layoutStart('Cierre de Caja','cierre',[['label'=>'Cierre de Caja']]);
 
 /* Resultado del arqueo con colores */
 .resultado-box{
-  border-radius:14px;padding:1.4rem;text-align:center;
+  border-radius:8px;padding:1.4rem;text-align:center;
   margin-top:1rem;transition:all .4s ease;
 }
 .resultado-ok     {background:var(--verde-bg);border:2px solid var(--verde-b);}
@@ -103,12 +103,12 @@ layoutStart('Cierre de Caja','cierre',[['label'=>'Cierre de Caja']]);
 .r-valor{font-family:var(--font-mono) !important;font-size:2rem;font-weight:900;margin:.25rem 0;font-feature-settings:"tnum" 1}
 .resultado-ok      .r-label,.resultado-ok      .r-valor{color:var(--verde)}
 .resultado-exceso  .r-label,.resultado-exceso  .r-valor{color:var(--azul)}
-.resultado-faltante.r-label,.resultado-faltante .r-valor{color:var(--rojo)}
+.resultado-faltante .r-label,.resultado-faltante .r-valor{color:var(--rojo)}
 .r-msg{font-size:.82rem;font-weight:600;opacity:.85}
 
 /* Live preview del arqueo */
 .live-arqueo{
-  background:var(--p1-bg);border:1.5px solid var(--p1-b);border-radius:11px;
+  background:var(--p1-bg);border:1.5px solid var(--p1-b);border-radius:8px;
   padding:.85rem 1rem;margin-top:.75rem;
   display:flex;align-items:center;justify-content:space-between;
   transition:background .3s,border-color .3s;
@@ -123,7 +123,7 @@ layoutStart('Cierre de Caja','cierre',[['label'=>'Cierre de Caja']]);
 .la-val.faltante {color:var(--rojo)}
 
 /* Historial */
-.hist-item{display:flex;align-items:center;gap:.75rem;padding:.65rem .75rem;border-radius:10px;border-bottom:1px solid var(--border);transition:background .12s}
+.hist-item{display:flex;align-items:center;gap:.75rem;padding:.65rem .75rem;border-radius:8px;border-bottom:1px solid var(--border);transition:background .12s}
 .hist-item:last-child{border-bottom:none}
 .hist-item:hover{background:var(--p1-bg)}
 .hist-fecha{font-size:.78rem;color:var(--txt-muted);font-family:var(--font-body)}
@@ -137,9 +137,9 @@ layoutStart('Cierre de Caja','cierre',[['label'=>'Cierre de Caja']]);
 <div class="caja-header-card fade-up">
   <div>
     <div class="ch-title"><i class="fa-solid fa-cash-register" style="margin-right:.4rem"></i>Cierre de Caja</div>
-    <div class="ch-sub">Turno del <?=date('d \d\e F Y')?> · Arqueo inteligente</div>
+    <div class="ch-sub">Turno del <?=date('d \d\e F Y')?></div>
   </div>
-  <div class="ch-icon">🔒</div>
+  <div class="ch-icon"><i class="fa-solid fa-vault"></i></div>
 </div>
 
 <div class="caja-grid">
@@ -147,7 +147,7 @@ layoutStart('Cierre de Caja','cierre',[['label'=>'Cierre de Caja']]);
   <!-- ── Resumen del turno ── -->
   <div>
     <div class="card fade-up delay-1" style="margin-bottom:.85rem">
-      <div class="card-header" style="background:linear-gradient(135deg,#1a0a2e,#2d1458)">
+      <div class="card-header" style="background:linear-gradient(135deg,#0f172a,#1e293b)">
         <h3 style="color:#fff;font-size:.88rem"><i class="fa-solid fa-chart-bar" style="margin-right:.35rem"></i>Resumen del Turno</h3>
       </div>
       <div class="card-body">
@@ -187,7 +187,7 @@ layoutStart('Cierre de Caja','cierre',[['label'=>'Cierre de Caja']]);
     <!-- Historial -->
     <?php if(!empty($historial)): ?>
     <div class="card fade-up delay-2">
-      <div class="card-header"><h3>🕐 Últimos cierres</h3></div>
+      <div class="card-header"><h3><i class="fa-solid fa-clock-rotate-left" style="color:var(--p1);margin-right:.35rem"></i>Últimos cierres</h3></div>
       <div>
         <?php foreach($historial as $h):
           $est=$h['estado']??'ok';
@@ -219,7 +219,8 @@ layoutStart('Cierre de Caja','cierre',[['label'=>'Cierre de Caja']]);
           <!-- Resultado guardado -->
           <div class="alerta alerta-exito"><i class="fa-solid fa-check"></i> Cierre registrado correctamente.</div>
           <div class="resultado-box resultado-<?=htmlspecialchars($resultado['estado'])?>">
-            <div class="r-icon"><?=$resultado['estado']==='ok'?'✅':($resultado['estado']==='exceso'?'💰':'⚠️')?></div>
+            <?php $res_icon = $resultado['estado']==='ok'?'fa-circle-check':($resultado['estado']==='exceso'?'fa-sack-dollar':'fa-triangle-exclamation'); ?>
+            <div class="r-icon"><i class="fa-solid <?=$res_icon?>"></i></div>
             <div class="r-label"><?=$resultado['estado']==='ok'?'Cuadre perfecto':($resultado['estado']==='exceso'?'Dinero de más':'Faltante en caja')?></div>
             <div class="r-valor"><?=dinero(abs($resultado['diferencia']))?></div>
             <div class="r-msg">
@@ -254,7 +255,7 @@ layoutStart('Cierre de Caja','cierre',[['label'=>'Cierre de Caja']]);
                 <div class="la-label" id="laLabel">Diferencia</div>
                 <div class="la-val" id="laVal">—</div>
               </div>
-              <div style="font-size:1.5rem" id="laIcon">⚖️</div>
+              <div style="font-size:1.5rem" id="laIcon"><i class="fa-solid fa-scale-balanced"></i></div>
             </div>
 
             <div style="margin-top:1rem">
@@ -282,7 +283,7 @@ layoutStart('Cierre de Caja','cierre',[['label'=>'Cierre de Caja']]);
 </div>
 
 <script>
-const esperado = <?=$efectivo_sistema?>;
+var esperado = <?=$efectivo_sistema?>;
 
 function calcArqueo(esperado){
   const ef = parseFloat(document.getElementById('efectivoInput').value)||0;
@@ -296,15 +297,15 @@ function calcArqueo(esperado){
   div.className='live-arqueo';
   if(diff===0){
     div.classList.add('ok');
-    lbl.textContent='¡Cuadre perfecto!'; ico.textContent='✅';
+    lbl.textContent='¡Cuadre perfecto!'; ico.innerHTML='<i class="fa-solid fa-circle-check"></i>';
     val.className='la-val ok'; val.textContent=dinero(0);
   } else if(diff>0){
     div.classList.add('exceso');
-    lbl.textContent='Tienes de más'; ico.textContent='💰';
+    lbl.textContent='Tienes de más'; ico.innerHTML='<i class="fa-solid fa-sack-dollar"></i>';
     val.className='la-val exceso'; val.textContent='+'+dinero(diff);
   } else {
     div.classList.add('faltante');
-    lbl.textContent='Te falta en caja'; ico.textContent='⚠️';
+    lbl.textContent='Te falta en caja'; ico.innerHTML='<i class="fa-solid fa-triangle-exclamation"></i>';
     val.className='la-val faltante'; val.textContent='-'+dinero(Math.abs(diff));
   }
 }

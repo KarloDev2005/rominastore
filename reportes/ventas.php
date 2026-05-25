@@ -58,17 +58,18 @@ layoutStart('Reportes', 'reportes', [['label'=>'Reportes'],['label'=>'Ventas']])
 <style>
 .filtros-bar{
   display:flex;gap:.65rem;margin-bottom:1.25rem;flex-wrap:wrap;align-items:flex-end;
-  background:var(--blanco);border:1px solid var(--gris-200);border-radius:var(--card-radio);
-  padding:.9rem 1rem;
+  background:var(--blanco);border:1px solid var(--gris-200);border-radius:8px;
+  padding:.95rem 1rem;box-shadow:var(--sh-sm);
 }
 .filtros-bar .form-group{margin:0}
+.filtros-bar .form-control{min-width:168px}
 .pag-wrap{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-top:.8rem}
 .pag-info{font-size:.78rem;color:var(--gris-400)}
 .pag-btns{display:flex;gap:.3rem}
 </style>
 
 <div class="page-head">
-  <div class="page-title">📊 Reporte de Ventas</div>
+  <div class="page-title"><i class="fa-solid fa-chart-line"></i> Reporte de Ventas</div>
   <div class="page-subtitle">Historial de transacciones por período</div>
 </div>
 
@@ -105,12 +106,12 @@ layoutStart('Reportes', 'reportes', [['label'=>'Reportes'],['label'=>'Ventas']])
       <label class="form-label">Hasta</label>
       <input type="date" name="fecha_fin" class="form-control" value="<?=e($fecha_fin)?>">
     </div>
-    <button type="submit" class="btn btn-verde">🔍 Filtrar</button>
+    <button type="submit" class="btn btn-verde"><i class="fa-solid fa-magnifying-glass"></i> Filtrar</button>
   </form>
   <a href="?fecha_inicio=<?=date('Y-m-d')?>&fecha_fin=<?=date('Y-m-d')?>" class="btn btn-gris">Hoy</a>
   <a href="?fecha_inicio=<?=date('Y-m-01')?>&fecha_fin=<?=date('Y-m-d')?>" class="btn btn-gris">Este mes</a>
   <a href="?fecha_inicio=<?=e($fecha_inicio)?>&fecha_fin=<?=e($fecha_fin)?>&csv=1"
-     class="btn btn-naranja" style="margin-left:auto">⬇ Exportar CSV</a>
+     class="btn btn-naranja" style="margin-left:auto"><i class="fa-solid fa-file-csv"></i> Exportar CSV</a>
 </div>
 
 <!-- Tabla -->
@@ -122,7 +123,7 @@ layoutStart('Reportes', 'reportes', [['label'=>'Reportes'],['label'=>'Ventas']])
       </thead>
       <tbody>
         <?php if($resultado->num_rows===0): ?>
-          <tr><td colspan="6"><div class="empty-state"><div class="ei">📭</div><p>Sin ventas en el período.</p></div></td></tr>
+          <tr><td colspan="6"><div class="empty-state"><div class="ei"><i class="fa-solid fa-inbox"></i></div><p>Sin ventas en el período.</p></div></td></tr>
         <?php else: ?>
           <?php while($v=$resultado->fetch_assoc()): ?>
           <tr>
